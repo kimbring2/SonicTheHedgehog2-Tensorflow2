@@ -24,9 +24,8 @@ You can download the dataset from my [Google Drive](https://drive.google.com/dri
 | MysticCaveZone.Act2 | [![Human Expert Data of MysticCaveZone Act2](https://i3.ytimg.com/vi/DQmAY0ekLSE/hqdefault.jpg)](https://youtu.be/DQmAY0ekLSE) |
 | HillTopZone.Act1 | [![Human Expert Data of HillTopZone Act1](https://i3.ytimg.com/vi/3iUufdoIgb0/hqdefault.jpg)](https://youtu.be/3iUufdoIgb0) |
 | HillTopZone.Act2 | [![Human Expert Data of HillTopZone Act2](https://i3.ytimg.com/vi/bG13CWnB3-Q/hqdefault.jpg)](https://youtu.be/bG13CWnB3-Q) |
-
-| CasinoNightZone.Act1 | [![Human Expert Data of CasinoNightZone Act1](https://i3.ytimg.com/vi/3iUufdoIgb0/hqdefault.jpg)](https://youtu.be/3iUufdoIgb0) |
-| CasinoNightZone.Act2 | [![Human Expert Data of CasinoNightZone Act2](https://i3.ytimg.com/vi/DQmAY0ekLSE/hqdefault.jpg)](https://youtu.be/DQmAY0ekLSE) |
+| CasinoNightZone.Act1 | [![Human Expert Data of CasinoNightZone Act1](https://i3.ytimg.com/vi/DDy2mG8x8kw/hqdefault.jpg)](https://youtu.be/DDy2mG8x8kw) |
+| CasinoNightZone.Act2 | [![Human Expert Data of CasinoNightZone Act2](https://i3.ytimg.com/vi/9tJEpHFq6T4/hqdefault.jpg)](https://youtu.be/9tJEpHFq6T4) |
 
 | WingFortressZone.Act1 | [![Human Expert Data of WingFortressZone Act1](https://i3.ytimg.com/vi/3iUufdoIgb0/hqdefault.jpg)](https://youtu.be/3iUufdoIgb0) |
 
