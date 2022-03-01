@@ -7,7 +7,7 @@ Tensorflow 2.0 code for training the SonicTheHedgehog2 with human expert data
 3. Sonic-the-Hedgehog-A3C-LSTM-tensorflow2: https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2
 
 # Human Expert Data
-You can download the dataset from my [Google Drive](https://drive.google.com/drive/folders/1xmhYnhjeELmnWxPYa7oRgQmrHOldCgtJ?usp=sharing). It consist of total 1800 data for 100 per each Act. 
+You can download the dataset from my [Google Drive](https://drive.google.com/drive/folders/1xmhYnhjeELmnWxPYa7oRgQmrHOldCgtJ?usp=sharing). It consists of total 1800 data for 100 per each Act. 
 
 | First Header  | Second Header |
 | ------------- | ------------- |
