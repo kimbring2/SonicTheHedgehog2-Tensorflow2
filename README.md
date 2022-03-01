@@ -1,5 +1,5 @@
 # SonicTheHedgehog2-Tensorflow2
-Tensorflow 2.0 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from Steam to test it.
+Tensorflow 2.0 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it.
 
 # Reference
 1. Gym Retro: https://github.com/openai/retro
