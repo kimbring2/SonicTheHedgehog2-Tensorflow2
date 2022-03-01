@@ -18,8 +18,8 @@ You can download the dataset from my [Google Drive](https://drive.google.com/dri
 | MetropolisZone.Act1  | [![Human Expert Data of MetropolisZone Act1](https://i3.ytimg.com/vi/Go2Pb0QsGxo/hqdefault.jpg)](https://youtu.be/Go2Pb0QsGxo) |
 | MetropolisZone.Act2  | [![Human Expert Data of MetropolisZone Act2](https://i3.ytimg.com/vi/PIgRHwKMEuQ/hqdefault.jpg)](https://youtu.be/PIgRHwKMEuQ) |
 | MetropolisZone.Act3  | [![Human Expert Data of MetropolisZone Act3](https://i3.ytimg.com/vi/hdTzAxawO1U/hqdefault.jpg)](https://youtu.be/hdTzAxawO1U) |
-| OilOceanZone.Act1  | [![Human Expert Data of MetropolisZone Act3](https://i3.ytimg.com/vi/hdTzAxawO1U/hqdefault.jpg)](https://youtu.be/hdTzAxawO1U) |
-| OilOceanZone.Act2  | [![Human Expert Data of MetropolisZone Act3](https://i3.ytimg.com/vi/hdTzAxawO1U/hqdefault.jpg)](https://youtu.be/hdTzAxawO1U) |
+| OilOceanZone.Act1  | [![Human Expert Data of OilOceanZone Act1](https://i3.ytimg.com/vi/h3dkyROZRQg/hqdefault.jpg)](https://youtu.be/h3dkyROZRQg) |
+| OilOceanZone.Act2  | [![Human Expert Data of OilOceanZone Act2](https://i3.ytimg.com/vi/hdTzAxawO1U/hqdefault.jpg)](https://youtu.be/hdTzAxawO1U) |
 
 SonicTheHedgehog2-Genesis,EmeraldHillZone.Act1
 SonicTheHedgehog2-Genesis,EmeraldHillZone.Act2
