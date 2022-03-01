@@ -3,6 +3,8 @@ Tensorflow 2.0 code for training the SonicTheHedgehog2 with human expert data. Y
 
 Sonic Gym environment has total 12 action dimension originally. Each action means ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"] key of original game pad. In game, We need to use only 6 combination of key. They are ['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'], ['DOWN', 'B'], ['B']. Every key combination of replay file are converted to these 6 action.
 
+In this environment, Agent need to travel the map for reaching the final location by passing various traps and monsters. At some Act, Agent need to defeat the boss monster at the final point. 
+
 # Reference
 1. Gym Retro: https://github.com/openai/retro
 2. Retro-movies: https://github.com/openai/retro-movies
