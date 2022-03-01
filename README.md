@@ -1,13 +1,22 @@
 # SonicTheHedgehog2-Tensorflow2
 Tensorflow 2.0 code for training the SonicTheHedgehog2 with human expert data
 
+# Reference
+1. Gym Retro: https://github.com/openai/retro
+2. Retro-movies: https://github.com/openai/retro-movies
+3. Sonic-the-Hedgehog-A3C-LSTM-tensorflow2: https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2
+
 # Human Expert Data
+You can download the dataset from my [Google Drive](https://drive.google.com/drive/folders/1xmhYnhjeELmnWxPYa7oRgQmrHOldCgtJ?usp=sharing). It consist of total 1800 data for 100 per each Act. 
+
 | First Header  | Second Header |
 | ------------- | ------------- |
 | EmeraldHillZone.Act1  | [![Human Expert Data of EmeraldHillZone Act1](https://i3.ytimg.com/vi/Lnp8KadJW2U/hqdefault.jpg)](https://youtu.be/Lnp8KadJW2U) |
 | EmeraldHillZone.Act2  | [![Human Expert Data of EmeraldHillZone Act2](https://i3.ytimg.com/vi/tXPcWOsnqkI/hqdefault.jpg)](https://youtu.be/tXPcWOsnqkI) |
-| ChemicalPlantZone.Act1  |  |
+| ChemicalPlantZone.Act1  | [![Human Expert Data of EmeraldHillZone Act2](https://i3.ytimg.com/vi/VTyPPJThAqM/hqdefault.jpg)](https://youtu.be/VTyPPJThAqM)  |
 | ChemicalPlantZone.Act2  |  |
+
+https://youtu.be/VTyPPJThAqM
 
 SonicTheHedgehog2-Genesis,EmeraldHillZone.Act1
 SonicTheHedgehog2-Genesis,EmeraldHillZone.Act2
