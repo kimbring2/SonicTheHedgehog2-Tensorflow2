@@ -13,10 +13,8 @@ You can download the dataset from my [Google Drive](https://drive.google.com/dri
 | ------------- | ------------- |
 | EmeraldHillZone.Act1  | [![Human Expert Data of EmeraldHillZone Act1](https://i3.ytimg.com/vi/Lnp8KadJW2U/hqdefault.jpg)](https://youtu.be/Lnp8KadJW2U) |
 | EmeraldHillZone.Act2  | [![Human Expert Data of EmeraldHillZone Act2](https://i3.ytimg.com/vi/tXPcWOsnqkI/hqdefault.jpg)](https://youtu.be/tXPcWOsnqkI) |
-| ChemicalPlantZone.Act1  | [![Human Expert Data of EmeraldHillZone Act2](https://i3.ytimg.com/vi/VTyPPJThAqM/hqdefault.jpg)](https://youtu.be/VTyPPJThAqM)  |
-| ChemicalPlantZone.Act2  |  |
-
-https://youtu.be/VTyPPJThAqM
+| ChemicalPlantZone.Act1  | [![Human Expert Data of ChemicalPlantZone Act1](https://i3.ytimg.com/vi/VTyPPJThAqM/hqdefault.jpg)](https://youtu.be/VTyPPJThAqM)  |
+| ChemicalPlantZone.Act2  | [![Human Expert Data of ChemicalPlantZone Act2](https://i3.ytimg.com/vi/1M-jv8GW4bc/hqdefault.jpg)](https://youtu.be/Go2Pb0QsGxo) |
 
 SonicTheHedgehog2-Genesis,EmeraldHillZone.Act1
 SonicTheHedgehog2-Genesis,EmeraldHillZone.Act2
