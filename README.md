@@ -4,7 +4,7 @@ Tensorflow 2.0 code for training the SonicTheHedgehog2 with human expert data
 # Human Expert Data
 | First Header  | Second Header |
 | ------------- | ------------- |
-| EmeraldHillZone.Act1  | [![Human Expert Data of EmeraldHillZone Act1](https://img.youtube.com/vi/ABomHc4_GlQ/maxresdefault.jpg)] https://youtu.be/Lnp8KadJW2U  |
+| EmeraldHillZone.Act1  | [![Human Expert Data of EmeraldHillZone Act1](https://i3.ytimg.com/vi/Lnp8KadJW2U/hqdefault.jpg)](https://youtu.be/Lnp8KadJW2U)  |
 | EmeraldHillZone.Act2  |  |
 
 SonicTheHedgehog2-Genesis,EmeraldHillZone.Act1
