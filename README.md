@@ -3,7 +3,7 @@
 
 Tensorflow 2.0 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the install tutorials of reference section.  
 
-Sonic Gym environment has total 12 action dimension originally. Each action means ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"] key of original game pad. In game, We need to use only 8 combination of key. They are [' '], ['LEFT'], ['RIGHT'], ['B', 'LEFT'], ['B', 'RIGHT'], ['DOWN'], ['DOWN', 'B'], ['B']. Every key combination of replay file are converted to them.
+Sonic Gym environment has total 12 action dimension originally. Each action means ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"] key of original game pad. In game, We need to use only 8 combination of key. They are [], ['LEFT'], ['RIGHT'], ['B', 'LEFT'], ['B', 'RIGHT'], ['DOWN'], ['DOWN', 'B'], ['B']. Every key combination of replay file are converted to them.
 
 In this environment, Agent need to travel the map for reaching the final location by passing various traps and monsters. At some Act, Agent need to defeat the boss monster at the final point. 
 
