@@ -9,40 +9,11 @@ import argparse
 from absl import flags
 from absl import logging
 
+#replay_path = '/home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/retro-movies/human/SonicTheHedgehog2-Genesis/contest'
+
 parser = argparse.ArgumentParser(description='Sonic IMPALA Learner')
 parser.add_argument('--replay_path', type=str, help='replay file root path')
 arguments = parser.parse_args()
-
-
-class SonicDiscretizer(gym.ActionWrapper):
-    """
-    Wrap a gym-retro environment and make it use discrete
-    actions for the Sonic game.
-    """
-    def __init__(self, env):
-        super(SonicDiscretizer, self).__init__(env)
-        buttons = ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
-        actions = [['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'],
-                   ['DOWN', 'B'], ['B']]
-
-        self._actions = []
-        for action in actions:
-            arr = np.array([0] * 12)
-            for button in action:
-                arr[buttons.index(button)] = 1
-
-            self._actions.append(arr)
-
-        self.action_space = gym.spaces.Discrete(len(self._actions))
-
-        print("self._actions: ", self._actions)
-
-    def action(self, a):
-        #print("a: ", a)
-        print("self._actions[a]: ", self._actions[a])
-        ##print("")
-
-        return self._actions[a].copy()
 
 
 action_dict = {
@@ -113,9 +84,9 @@ action_dict = {
                 '[0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]': 64,
                 '[1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]': 65,
                 '[0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0]': 66,
+                '[0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]': 67
 
               }
-
 action_list = [
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
@@ -183,43 +154,135 @@ action_list = [
                 [0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
                 [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
                 [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0]
+                [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]
               ]
 
-'''
-env = retro.make(game='SonicTheHedgehog2-Genesis', state=retro.State.NONE, use_restricted_actions=retro.Actions.ALL)
-#replay_path = '/home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/retro-movies/human/SonicTheHedgehog2-Genesis/contest'
-replay_path = arguments.replay_path
+# ['']:                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# ['LEFT']:            [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+# ['RIGHT']:           [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
+# ['B', 'LEFT']:       [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+# ['B', 'RIGHT']:      [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
+# ['DOWN']:            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+# ['DOWN', 'B']:       [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+# ['B']:               [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+#["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
 
-replay_file_path_list = glob.glob(replay_path + '/*.bk2')
-for replay_name in replay_file_path_list:
-    #print("replay_name: ", replay_name)
-    replay_name = random.choice(replay_file_path_list)
-    #replay_name = 'SonicTheHedgehog2-Genesis-EmeraldHillZone.Act1-0000.bk2'
-    replay = retro.Movie(os.path.join(replay_path, replay_name))
-    replay.step()
+action_conversion_table = {
+                '[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']        
+                '[0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0], # = ['DOWN']
+                '[0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]' : [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0], # = ['B', 'DOWN']
+                '[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]' : [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]' : [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT']
+                '[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['RIGHT']
+                '[0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0], # = ['']
+                '[0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], # = ['LEFT']
+                '[0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]' : [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], # = ['B', 'LEFT']
+                '[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]' : [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT']
+                '[0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0], # = ['LEFT'] 
+                '[0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]' : [0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT', 'DOWN']
+                '[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], # = ['RIGHT']
+                '[0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], # = ['B']
+                '[0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]' : [0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]' : [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0], # = ['B']
+                '[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], # = ['B', 'LEFT']
+                '[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0], # = ['B', 'DOWN']
+                '[1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT', 'DOWN']
+                '[0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0]' : [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0], # = ['LEFT']
+                '[1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0], # = ['B']
+                '[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]' : [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], # = ['']
+                '[1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0], # = ['B', 'LEFT']
+                '[1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0], # = ['B', DOWN]
+                '[0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0], # = ['DOWN']
+                '[1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]' : [1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0], # = ['B']
+                '[1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0], # = ['B']
+                '[0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0], # = ['B', 'RIGHT']
+                '[0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0]' : [0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0], # = ['LEFT']
+                '[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]' : [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1], # = ['RIGHT']
+                '[1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0], # = ['B', 'DOWN']
+                '[1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]' : [1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT’]
 
-    env.initial_state = replay.get_state()
-    env.reset()
+                '[0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], # = ['B', 'LEFT']
 
-    print('stepping replay')
-    while replay.step():
-        keys = []
-        for i in range(len(env.buttons)):
-            key = int(replay.get_key(i, 0))
-            keys.append(key)
+                '[1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT']
+                '[1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT']
+                '[0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['RIGHT']
+                '[0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0], # = ['B', 'DOWN']
+                '[1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0]' : [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['RIGHT']
+                '[0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']
+                '[1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0]' : [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']
+                '[0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['RIGHT']
+                '[1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], # = ['B', 'LEFT']
+                '[1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], # = ['B', 'LEFT']
+                '[1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']
+                '[0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']
+                '[1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]' : [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], # = ['LEFT']
+                '[0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1]' : [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['RIGHT']
+                '[1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT'] 
+                '[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']
+                '[1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1]' : [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['RIGHT']
+                '[1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT']
+                '[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']
+                '[0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']
+                '[1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1]' : [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], # = ['LEFT']
+                '[1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0], # = ['B', 'DOWN']
+                '[0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['RIGHT']
+                '[0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
+                '[0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0]' : [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT']
+                '[0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0], # = ['DOWN', RIGHT']
+              }
 
-        #print("keys: ", keys)
-        action_index = action_dict[str(keys)]
-        #print("action_index: ", action_index)
+test = True
 
-        _obs, _rew, _done, _info = env.step(keys)
+if test:
+    env = retro.make(game='SonicTheHedgehog2-Genesis', state=retro.State.NONE, use_restricted_actions=retro.Actions.ALL)
+    replay_path = arguments.replay_path
 
-        #env.render()
-        #time.sleep(0.01)
+    #replay_file_path_list = glob.glob(replay_path + '/*.bk2')
+    replay_file_path_list = glob.glob(replay_path + '/*.bk2')
+    for replay_name in replay_file_path_list:
+        print("replay_name: ", replay_name)
+        replay_name = random.choice(replay_file_path_list)
+        #replay_name = 'SonicTheHedgehog2-Genesis-EmeraldHillZone.Act1-0000.bk2'
+        replay = retro.Movie(os.path.join(replay_path, replay_name))
+        replay.step()
 
-        saved_state = env.em.get_state()
-'''
+        env.initial_state = replay.get_state()
+        env.reset()
+
+        print('stepping replay')
+        while replay.step():
+            keys = []
+            for i in range(len(env.buttons)):
+                key = int(replay.get_key(i, 0))
+                keys.append(key)
+
+            #print("str(keys): ", str(keys))
+            action_index = action_dict[str(keys)]
+            #print("action_index: ", action_index)
+
+            converted_action = action_conversion_table[str(keys)]
+            #print("converted_action: ", converted_action)
+            #print("")
+
+            _obs, _rew, _done, _info = env.step(converted_action)
+
+            #_obs, _rew, _done, _info = env.step(keys)
+
+            env.render()
+            #time.sleep(0.01)
+
+            saved_state = env.em.get_state()
+
 
 #print("len(action_dict.keys()): ", len(action_dict.keys()))
 #print("action_dict.keys(): ", action_dict.keys())
@@ -228,97 +291,173 @@ for replay_name in replay_file_path_list:
 #actions = [['LEFT'], ['RIGHT'], ['LEFT', 'DOWN'], ['RIGHT', 'DOWN'], ['DOWN'],
 #           ['DOWN', 'B'], ['B']]
 
+# ['']:                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 # ['LEFT']:            [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
 # ['RIGHT']:           [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
-# ['LEFT', 'DOWN']:    [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]
-# ['RIGHT', 'DOWN']:   [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]
+# ['B', 'LEFT']:       [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+# ['B', 'RIGHT']:      [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
 # ['DOWN']:            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
 # ['DOWN', 'B']:       [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
 # ['B']:               [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-'''
-action_list = [
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] = ['']
-                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0] = ['LEFT']
-                [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0] = ['LEFT']
-                [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] = ['A']
-                [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0] = ['A', 'RIGHT']
-                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0] = ['RIGHT']
-                [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0] = ['LEFT', 'RIGHT']
-                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0] = ['LEFT']
-                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0] = ['A', 'LEFT']
-                [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] = ['B', 'A']
-                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] = ['B']
-                [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0] = ['B', 'RIGHT']
-                [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] = ['DOWN', 'LEFT']
-                [0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0] = ['A', 'DOWN', 'RIGHT']
-                [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0] = ['DOWN', 'RIGHT']
-                [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] = ['C']
-                [0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] = ['A', 'UP']
-                [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0] = ['A', 'LEFT', 'RIGHT'] = ['']
-                [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0] = ['B', 'LEFT'] = ['LEFT']
-                [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0] = ['B', 'DOWN'] = ['DOWN']
-                [1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0] = ['B', 'DOWN', 'RIGHT']
-                [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0] = ['UP', 'LEFT']
-                [1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0] = ['B', 'LEFT', 'RIGHT']
-                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] = ['UP']
-                [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0] = ['B', 'UP', 'LEFT']
-                [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] = ['B', 'DOWN', 'LEFT']
-                [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0] = ['DOWN', 'LEFT', 'RIGHT']
-                [1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0] = ['B', 'A', 'LEFT', 'RIGHT']
-                [1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] = ['B', 'LEFT', 'RIGHT', 'C']
-                [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0] = ['RIGHT', 'C']
-                [0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0] = ['LEFT', 'Y']
-                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1] = ['RIGHT', 'Z']
-                [1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0] = ['B', 'DOWN', 'LEFT', 'RIGHT']
-                [1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0] = ['B', 'A', 'RIGHT']
-                [0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0] = ['LEFT', 'C']
-                [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] = ['B', 'UP']
-                [1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0] = ['B', 'UP', 'RIGHT']
-                [1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0] = ['B', 'RIGHT', 'C']
-                [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0] = ['UP', 'RIGHT']
-                [0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] = ['A', 'DOWN', 'LEFT']
-                [1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0] = ['B', 'UP', 'LEFT', 'RIGHT']
-    
-                #buttons = ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
 
-                [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0] = ['B', 'UP', 'LEFT', 'RIGHT']
-                [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0] = ['UP', 'DOWN']
-                [1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] = ['B', 'A', 'LEFT', 'RIGHT', 'C']
-                [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0] = ['RIGHT', 'Y']
-                [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0] = ['B', 'LEFT', 'C']
-                [1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0] = ['B', 'A', 'LEFT']
-                [1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0] = ['B', 'UP', 'DOWN']
-                [0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0] = ['UP', 'LEFT', 'RIGHT']
-                [0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] = ['A', 'LEFT', 'RIGHT', 'C']
-                [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0] = ['B', 'C']
-                [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] = ['B', 'LEFT', 'Z']
-                [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0] = ['LEFT', 'RIGHT', 'C']
-                [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1] = ['B', 'RIGHT', 'Z']
-                [1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0] = ['B', 'RIGHT', 'Y']
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0] = ['Y']
-                [1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1] = ['B', 'RIGHT', 'Y', 'Z']
-                [1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0] = ['B', 'UP', 'RIGHT', 'Y']
-                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0] = ['B', 'X']
-                [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0] = ['LEFT', 'RIGHT', 'X']
-                [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1] = ['B', 'UP', 'LEFT', 'Z']
-                [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0] = ['B', 'DOWN', 'C']
-                [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0] = ['A', 'LEFT', 'RIGHT', 'X']
-                [0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0] = ['A', 'RIGHT', 'C']
-                [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] = ['UP', 'C']
-                [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] = ['B', 'UP', 'C']
-                [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0] = ['A', 'RIGHT', 'X']
-              ]
-'''
+test_action = [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+test_action_1 = [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
 
 #["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
-action_sequence_list = [[0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
-                        [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
-                        [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
-                        [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
-                        [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
-                        [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
+action_sequence_list = [#test_action,
+                        #test_action,
+                        #test_action,
+                        #test_action,
+                        #test_action,
+                        #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        test_action_1,
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        #test_action,
+                        #test_action,
+                        #test_action,
+                        #test_action,
+                        #test_action,
+                        #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        #[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                        #test_action,
+                        #test_action,
+                        #test_action,
+                        #test_action,
+                        #test_action,
                        ]
+
+
+
+class SonicDiscretizer(gym.ActionWrapper):
+    """
+    Wrap a gym-retro environment and make it use discrete
+    actions for the Sonic game.
+    """
+    def __init__(self, env):
+        super(SonicDiscretizer, self).__init__(env)
+        buttons = ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"]
+        actions = [[], ['LEFT'], ['RIGHT'], ['B', 'LEFT'], ['B', 'RIGHT'],
+                   ['DOWN'], ['DOWN', 'B'], ['B']]
+
+        self._actions = []
+        for action in actions:
+            arr = np.array([0] * 12)
+            for button in action:
+                arr[buttons.index(button)] = 1
+
+            self._actions.append(arr)
+
+        self.action_space = gym.spaces.Discrete(len(self._actions))
+
+        #print("self._actions: ", self._actions)
+
+    def action(self, a):
+        #print("a: ", a)
+        #print("self._actions[a]: ", self._actions[a])
+        ##print("")
+
+        return self._actions[a].copy()
+
 
 def main():
     env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act1')
@@ -329,9 +468,11 @@ def main():
     obs = env.reset()
     while True:
         #action = env.action_space.sample()
-        action = random.choice(action_list)
+        #action = random.choice(action_list)
         action = action_sequence_list[action_index]
-        #print("action: ", action)
+
+        time.sleep(0.05)
+        print("action: ", action)
 
         if action_index != len(action_sequence_list) - 1:
             action_index += 1
