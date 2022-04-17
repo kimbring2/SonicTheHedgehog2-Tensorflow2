@@ -314,17 +314,17 @@ if test:
 
     break_flag = True
     for replay_name in replay_file_path_list:
-        #replay_name = random.choice(replay_file_path_list)
+        replay_name = random.choice(replay_file_path_list)
         replay_name = replay_name.split('/')[-1]
         
         print("replay_name: ", replay_name)
-        
+        '''
         if replay_name == 'SonicTheHedgehog2-Genesis-WingFortressZone-0004.bk2':
             break_flag = False
 
         if break_flag == True:
             continue
-        
+        '''
         #replay_name = 'SonicTheHedgehog2-Genesis-WingFortressZone-0004.bk2'
 
         replay = retro.Movie(os.path.join(replay_path, replay_name))
