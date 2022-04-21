@@ -33,6 +33,8 @@ In game, we need to use only 8 combination of key like a below.
 | ['B', 'LEFT', 'RIGHT'] | [1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0] |
 | ['DOWN', 'LEFT', 'RIGHT'] | [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0] |
 
+According to key description, 'A', 'B' are same key. However, I find they show different result at some situation. 
+
 Every key combination of replay file can be converted to them.
 
 In this environment, Agent need to travel the map for reaching the final location by passing various traps and monsters. At some Act, Agent need to defeat the boss monster at the final point. 
