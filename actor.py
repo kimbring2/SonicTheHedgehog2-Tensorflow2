@@ -309,8 +309,11 @@ possible_action_list = [
                         [0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]
                        ]
 
-test = True
 
+stage_name_list = ['EmeraldHillZone', 'ChemicalPlantZone', 'AquaticRuinZone', 'CasinoNightZone', 'HillTopZone',
+                   'MysticCaveZone', 'OilOceanZone', 'MetropolisZone', 'WingFortressZone']
+
+test = True
 if test:
     env = retro.make(game='SonicTheHedgehog2-Genesis', state=retro.State.NONE, use_restricted_actions=retro.Actions.ALL)
     replay_path = arguments.replay_path
@@ -323,6 +326,12 @@ if test:
         replay_name = replay_name.split('/')[-1]
         
         print("replay_name: ", replay_name)
+        stage_name = replay_name.split('-')
+        stage_name = stage_name[2].split('.')[0]
+        print("stage_name: ", stage_name)
+        stage_index = stage_name_list.index(stage_name)
+        print("stage_index: ", stage_index)
+        print("")
         '''
         if replay_name == 'SonicTheHedgehog2-Genesis-WingFortressZone-0004.bk2':
             break_flag = False
