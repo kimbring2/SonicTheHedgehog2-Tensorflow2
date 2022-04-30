@@ -181,71 +181,65 @@ stage_len = len(stage_name_list)
 
 class TrajetoryDataset(tf.data.Dataset):
   def _generator(num_trajectorys):
+    env = retro.make(game='SonicTheHedgehog2-Genesis', state=retro.State.NONE, use_restricted_actions=retro.Actions.ALL)
+
     while True:
-        env = retro.make(game='SonicTheHedgehog2-Genesis', state=retro.State.NONE, use_restricted_actions=retro.Actions.ALL)
-
         replay_file_path_list = glob.glob(replay_path + '/*.bk2')
-        for replay_name in replay_file_path_list:
-            replay_name = random.choice(replay_file_path_list)
-            replay_name = replay_name.split('/')[-1]
+        replay_name = random.choice(replay_file_path_list)
+        replay_name = replay_name.split('/')[-1]
 
-            #print("replay_name: ", replay_name)
-            stage_name = replay_name.split('-')
-            stage_name = stage_name[2].split('.')[0]
-            #print("stage_name: ", stage_name)
-            stage_index = stage_name_list.index(stage_name)
-            print("stage_index: ", stage_index)
+        stage_name = replay_name.split('-')
+        stage_name = stage_name[2].split('.')[0]
+        stage_index = stage_name_list.index(stage_name)
+        print("stage_index: ", stage_index)
 
-            replay = retro.Movie(os.path.join(replay_path, replay_name))
-            replay.step()
+        replay = retro.Movie(os.path.join(replay_path, replay_name))
+        replay.step()
 
-            env.initial_state = replay.get_state()
-            obs = env.reset()
-            action_index = 0
+        env.initial_state = replay.get_state()
+        obs = env.reset()
+        action_index = 0
 
-            obs_list, action_list = [], []
+        obs_list, action_list = [], []
 
-            step_num = 0
+        step_num = 0
 
-            print('stepping replay')
-            while replay.step():
-                obs_resized = cv2.resize(obs, dsize=(84, 84), interpolation=cv2.INTER_AREA)
-                obs_resized = cv2.cvtColor(obs_resized, cv2.COLOR_BGR2RGB)
-                obs_resized = np.reshape(obs_resized,(84,84,3)) / 255.0
-                stage_layer = np.zeros([84,84,stage_len], dtype=np.float32)
-                stage_layer[:, :, stage_index] = 1.0
+        print('stepping replay')
+        while replay.step():
+            obs_resized = cv2.resize(obs, dsize=(84,84), interpolation=cv2.INTER_AREA)
+            obs_resized = cv2.cvtColor(obs_resized, cv2.COLOR_BGR2RGB)
+            obs_resized = np.reshape(obs_resized,(84,84,3)) / 255.0
+            stage_layer = np.zeros([84,84,stage_len], dtype=np.float32)
+            stage_layer[:, :, stage_index] = 1.0
 
-                obs_concated = np.concatenate((obs_resized, stage_layer), axis=2)
+            obs_concated = np.concatenate((obs_resized, stage_layer), axis=2)
 
-                obs_list.append(obs_concated)
-                action_list.append(np.array([action_index]))
+            obs_list.append(obs_concated)
+            action_list.append(np.array([action_index]))
 
-                keys = []
-                for i in range(len(env.buttons)):
-                    key = int(replay.get_key(i, 0))
-                    keys.append(key)
+            keys = []
+            for i in range(len(env.buttons)):
+                key = int(replay.get_key(i, 0))
+                keys.append(key)
 
-                converted_action = action_conversion_table[str(keys)]
-                #print("converted_action: ", converted_action)
+            converted_action = action_conversion_table[str(keys)]
+            #print("converted_action: ", converted_action)
 
-                action_index = possible_action_list.index(converted_action)
-                #print("action_index: ", action_index)
+            action_index = possible_action_list.index(converted_action)
+            #print("action_index: ", action_index)
 
-                obs, rew, done, info = env.step(converted_action)
+            obs, rew, done, info = env.step(converted_action)
 
-                #env.render()
+            #env.render()
 
-                saved_state = env.em.get_state()
+            saved_state = env.em.get_state()
+            step_num += 1
 
-                #if step_num == 100:
-                #    print("break")
-                #    break
+            #if step_num == 100:
+            #    break
 
-                step_num += 1
-
-            yield (obs_list, action_list)
-            obs_list, action_list = [], []
-
+        yield (obs_list, action_list)
+        break
 
   def __new__(cls, num_trajectorys=3):
       return tf.data.Dataset.from_generator(
@@ -285,7 +279,7 @@ def supervised_replay(replay_obs_list, replay_act_list, memory_state, carry_stat
     carry_state = replay_carry_state_array
 
     batch_size = replay_obs_array.shape[0]
-    tf.print("batch_size: ", batch_size)
+    #tf.print("batch_size: ", batch_size)
     
     with tf.GradientTape() as tape:
         act_probs = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
@@ -300,8 +294,8 @@ def supervised_replay(replay_obs_list, replay_act_list, memory_state, carry_stat
 
         act_probs = act_probs.stack()
 
-        tf.print("replay_act_array: ", replay_act_array)
-        tf.print("tf.argmax(act_probs, 1): ", tf.argmax(act_probs, 1))
+        #tf.print("replay_act_array: ", replay_act_array)
+        #tf.print("tf.argmax(act_probs, 1): ", tf.argmax(act_probs, 1))
 
         replay_act_array_onehot = tf.one_hot(replay_act_array, num_actions)
         replay_act_array_onehot = tf.reshape(replay_act_array_onehot, (batch_size, num_actions))
@@ -311,8 +305,8 @@ def supervised_replay(replay_obs_list, replay_act_list, memory_state, carry_stat
         regularization_loss = tf.reduce_sum(model.losses)
         total_loss = act_loss + 1e-5 * regularization_loss
     
-        tf.print("total_loss: ", total_loss)
-        tf.print("")
+        #tf.print("total_loss: ", total_loss)
+        #tf.print("")
         
     grads = tape.gradient(total_loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
@@ -336,7 +330,7 @@ def supervised_train(dataset, training_episode):
             obs = replay_obs_list[episode_index:episode_index+step_length,:,:,:]
             act = replay_act_list[episode_index:episode_index+step_length,:]
             
-            #print("len(obs): ", len(obs))
+            #print("episode_index: ", episode_index)
             if len(obs) != step_length:
                 break
             
@@ -345,10 +339,11 @@ def supervised_train(dataset, training_episode):
             memory_state = next_memory_state
             carry_state = next_carry_state
         
-            print("total_loss: ", total_loss)
-            print("")
+            #print("total_loss: ", total_loss)
+            #print("")
             
         with writer.as_default():
+            #print("training_episode: ", training_episode)
             tf.summary.scalar("total_loss", total_loss, step=training_episode)
             writer.flush()
 
@@ -357,4 +352,5 @@ def supervised_train(dataset, training_episode):
             
         
 for training_episode in range(0, 2000000):
+    #print("training_episode: ", training_episode)
     supervised_train(dataset, training_episode)
