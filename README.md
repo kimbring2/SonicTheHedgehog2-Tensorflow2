@@ -68,9 +68,15 @@ You can download the dataset from my [Google Drive](https://drive.google.com/dri
 | AquaticRuinZone.Act1 | [![Human Expert Data of AquaticRuinZone Act1](https://i3.ytimg.com/vi/PZlf6hVbrbU/hqdefault.jpg)](https://youtu.be/PZlf6hVbrbU) |
 | AquaticRuinZone.Act2 | [![Human Expert Data of AquaticRuinZone Act2](https://i3.ytimg.com/vi/fuBFcSBd8v8/hqdefault.jpg)](https://youtu.be/fuBFcSBd8v8) |
 
-# Code for loading expert data
+# How to run code
+
+## Loading and rendering the expert data
 You can load and render the content of replay file by below command.  
 
 $ python actor.py --replay_path [replay file folder]
 
 You can use that code for training your own Agent.
+
+## Running the Supervised Training
+
+$ python run_supervised_learning.py --workspace_path [root directory of this project]
