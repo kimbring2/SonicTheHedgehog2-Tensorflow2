@@ -16,13 +16,14 @@ import retro
 import gym
 import os
 import argparse
+import cv2
 
 import network
 
 parser = argparse.ArgumentParser(description='Sonic Supervised Learning')
 parser.add_argument('--workspace_path', type=str, help='root directory of project')
 parser.add_argument('--pretrained_model', type=str, help='pretrained model name')
-parser.add_argument('--data_path', type=str, help='root directory of dataset')
+parser.add_argument('--replay_path', type=str, help='root directory of dataset')
 parser.add_argument('--gpu_use', type=bool, default=False, help='use gpu')
 
 arguments = parser.parse_args()
@@ -36,7 +37,7 @@ else:
 
 
 workspace_path = arguments.workspace_path
-replay_path = arguments.data_path
+replay_path = arguments.replay_path
 
 writer = tf.summary.create_file_writer(workspace_path + "/tensorboard")
 
@@ -176,6 +177,7 @@ possible_action_list = [
 
 stage_name_list = ['EmeraldHillZone', 'ChemicalPlantZone', 'AquaticRuinZone', 'CasinoNightZone', 'HillTopZone',
                    'MysticCaveZone', 'OilOceanZone', 'MetropolisZone', 'WingFortressZone']
+stage_len = len(stage_name_list)
 
 class TrajetoryDataset(tf.data.Dataset):
   def _generator(num_trajectorys):
@@ -193,7 +195,6 @@ class TrajetoryDataset(tf.data.Dataset):
             #print("stage_name: ", stage_name)
             stage_index = stage_name_list.index(stage_name)
             print("stage_index: ", stage_index)
-            print("")
 
             replay = retro.Movie(os.path.join(replay_path, replay_name))
             replay.step()
@@ -204,15 +205,19 @@ class TrajetoryDataset(tf.data.Dataset):
 
             obs_list, action_list = [], []
 
+            step_num = 0
+
             print('stepping replay')
             while replay.step():
-                obs = np.reshape(obs,(84,84,3))
-                stage_layer = np.zeros([84,84,scale], dtype=np.float32)
+                obs_resized = cv2.resize(obs, dsize=(84, 84), interpolation=cv2.INTER_AREA)
+                obs_resized = cv2.cvtColor(obs_resized, cv2.COLOR_BGR2RGB)
+                obs_resized = np.reshape(obs_resized,(84,84,3)) / 255.0
+                stage_layer = np.zeros([84,84,stage_len], dtype=np.float32)
                 stage_layer[:, :, stage_index] = 1.0
 
-                obs = np.concatenate((obs, stage_layer), axis=2)
+                obs_concated = np.concatenate((obs_resized, stage_layer), axis=2)
 
-                obs_list.append(obs)
+                obs_list.append(obs_concated)
                 action_list.append(np.array([action_index]))
 
                 keys = []
@@ -221,16 +226,22 @@ class TrajetoryDataset(tf.data.Dataset):
                     keys.append(key)
 
                 converted_action = action_conversion_table[str(keys)]
-                print("converted_action: ", converted_action)
+                #print("converted_action: ", converted_action)
 
                 action_index = possible_action_list.index(converted_action)
-                print("action_index: ", action_index)
+                #print("action_index: ", action_index)
 
                 obs, rew, done, info = env.step(converted_action)
 
-                env.render()
+                #env.render()
 
                 saved_state = env.em.get_state()
+
+                #if step_num == 100:
+                #    print("break")
+                #    break
+
+                step_num += 1
 
             yield (obs_list, action_list)
             obs_list, action_list = [], []

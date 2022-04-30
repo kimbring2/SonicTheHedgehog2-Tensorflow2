@@ -6,6 +6,7 @@ import time
 import glob
 import random
 import argparse
+import cv2
 from absl import flags
 from absl import logging
 
@@ -368,7 +369,12 @@ if test:
             #print("obs.shape: ", obs.shape)
             #print("done: ", done)
 
-            env.render()
+            obs = cv2.resize(obs, dsize=(84, 84), interpolation=cv2.INTER_AREA)
+            obs = cv2.cvtColor(obs, cv2.COLOR_BGR2RGB)
+            cv2.imshow("obs", obs)
+            cv2.waitKey(1)
+
+            #env.render()
 
             saved_state = env.em.get_state()
 
