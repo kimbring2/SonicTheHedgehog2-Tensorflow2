@@ -39,6 +39,13 @@ Every key combination of replay file can be converted to them.
 
 In this environment, Agent need to travel the map for reaching the final location by passing various traps and monsters. At some Act, Agent need to defeat the boss monster at the final point. 
 
+# Python Dependencies
+1. gym                     0.14.0
+2. tensorflow-gpu          2.4.1                
+3. tensorflow-probability  0.11.0
+4. pygame                  1.9.6
+5. gym-retro               0.8.0
+
 # Reference
 1. Gym Retro: https://github.com/openai/retro
 2. Retro-movies: https://github.com/openai/retro-movies
@@ -78,5 +85,13 @@ $ python actor.py --replay_path [replay file folder]
 You can use that code for training your own Agent.
 
 ## Running the Supervised Training
+It will save a weight of model to the model folder of the workspace path.
 
 $ python run_supervised_learning.py --workspace_path [root directory of this project]
+
+You can the training progress by watching the Tensorboard log of the tensorboard folder of the workspace path.
+
+## Running the Evaluation
+After finishing the Supervised Learning, try to test a performance of a trained model.
+
+python run_evaluation.py --workspace_path [root directory of this project] --model_name [Trained Model of the Supervised Learning]
