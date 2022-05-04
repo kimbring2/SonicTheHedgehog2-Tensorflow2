@@ -32,6 +32,7 @@ In game, we need to use only 8 combination of key like a below.
 | ['A', 'RIGHT', 'DOWN'] | [0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0] |
 | ['B', 'LEFT', 'RIGHT'] | [1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0] |
 | ['DOWN', 'LEFT', 'RIGHT'] | [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0] |
+| ['B', 'LEFT', 'DOWN'] | [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] |
 
 According to key description, 'A', 'B' are same key. However, I find they show different result at some situation. 
 
