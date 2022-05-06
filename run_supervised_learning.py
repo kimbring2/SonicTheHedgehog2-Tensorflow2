@@ -188,10 +188,10 @@ class TrajetoryDataset(tf.data.Dataset):
         replay_name = random.choice(replay_file_path_list)
         replay_name = replay_name.split('/')[-1]
 
-        stage_name = replay_name.split('-')
-        stage_name = stage_name[2].split('.')[0]
-        stage_index = stage_name_list.index(stage_name)
-        print("stage_index: ", stage_index)
+        #stage_name = replay_name.split('-')
+        #stage_name = stage_name[2].split('.')[0]
+        #stage_index = stage_name_list.index(stage_name)
+        #print("stage_index: ", stage_index)
 
         replay = retro.Movie(os.path.join(replay_path, replay_name))
         replay.step()
@@ -206,17 +206,6 @@ class TrajetoryDataset(tf.data.Dataset):
 
         print('stepping replay')
         while replay.step():
-            obs_resized = cv2.resize(obs, dsize=(84,84), interpolation=cv2.INTER_AREA)
-            obs_resized = cv2.cvtColor(obs_resized, cv2.COLOR_BGR2RGB)
-            obs_resized = np.reshape(obs_resized,(84,84,3)) / 255.0
-            stage_layer = np.zeros([84,84,stage_len], dtype=np.float32)
-            stage_layer[:, :, stage_index] = 1.0
-
-            obs_concated = np.concatenate((obs_resized, stage_layer), axis=2)
-
-            obs_list.append(obs_concated)
-            action_list.append(np.array([action_index]))
-
             keys = []
             for i in range(len(env.buttons)):
                 key = int(replay.get_key(i, 0))
@@ -227,6 +216,18 @@ class TrajetoryDataset(tf.data.Dataset):
 
             action_index = possible_action_list.index(converted_action)
             #print("action_index: ", action_index)
+
+            obs_resized = cv2.resize(obs, dsize=(64,64), interpolation=cv2.INTER_AREA)
+            obs_resized = cv2.cvtColor(obs_resized, cv2.COLOR_BGR2RGB)
+            obs_resized = np.reshape(obs_resized,(64,64,3)) / 255.0
+            #stage_layer = np.zeros([64,64,stage_len], dtype=np.float32)
+            #stage_layer[:, :, stage_index] = 1.0
+
+            #obs_concated = np.concatenate((obs_resized, stage_layer), axis=2)
+            obs_concated = obs_resized
+
+            obs_list.append(obs_concated)
+            action_list.append(np.array([action_index]))
 
             obs, rew, done, info = env.step(converted_action)
 
@@ -239,6 +240,16 @@ class TrajetoryDataset(tf.data.Dataset):
             #    break
 
         yield (obs_list, action_list)
+        '''
+        list_len = len(obs_list)
+
+        sample = random.random()
+        print("sample: ", sample)
+        if sample > 0.5:
+            yield (obs_list[0:int(list_len / 2)], action_list[0:int(list_len / 2)])
+        else:
+            yield (obs_list[int(list_len / 2):], action_list[int(list_len / 2):])
+        '''
         break
 
   def __new__(cls, num_trajectorys=3):

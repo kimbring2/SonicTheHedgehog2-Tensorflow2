@@ -79,7 +79,6 @@ tf.random.set_seed(seed)
 np.random.seed(seed)
 
 reward_sum = 0
-
 stage_index = 0
 
 # Create the environment
@@ -92,7 +91,8 @@ for i_episode in range(0, 10000):
     
     stage_layer = np.zeros([64,64,stage_len], dtype=np.float32)
     stage_layer[:, :, stage_index] = 1.0
-    state = np.concatenate((state, stage_layer), axis=2)
+    #state = np.concatenate((state, stage_layer), axis=2)
+    state = state
 
     memory_state = tf.zeros([1,128], dtype=np.float32)
     carry_state = tf.zeros([1,128], dtype=np.float32)
@@ -106,15 +106,21 @@ for i_episode in range(0, 10000):
         action_dist = tfd.Categorical(logits=action_probs)
         action_index = int(action_dist.sample()[0])
 
-        print("action_index: ", action_index)
+        #print("action_index: ", action_index)
         action = possible_action_list[action_index]
 
         observation1, reward, done, info = env.step(action)
+        observation1 = cv2.cvtColor(observation1, cv2.COLOR_BGR2RGB)
+        #cv2.imshow("observation1", observation1)
+        #cv2.waitKey(1)
+
         observation1_resized = cv2.resize(observation1, dsize=(64,64), interpolation=cv2.INTER_AREA)
+        #observation1_resized = cv2.cvtColor(observation1_resized, cv2.COLOR_BGR2RGB)
         next_state = observation1_resized / 255.0
         stage_layer = np.zeros([64,64,stage_len], dtype=np.float32)
         stage_layer[:, :, stage_index] = 1.0
-        next_state = np.concatenate((next_state, stage_layer), axis=2)
+        #next_state = np.concatenate((next_state, stage_layer), axis=2)
+        next_state = next_state
 
         reward_sum += reward
 
