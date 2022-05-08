@@ -84,14 +84,39 @@ $ python actor.py --replay_path [replay file folder]
 
 You can use that code for training your own Agent.
 
-## Running the Supervised Training
+## Running a Supervised Training
 It will save a weight of model to the model folder of the workspace path.
 
 $ python run_supervised_learning.py --workspace_path [root directory of this project]
 
 You can the training progress by watching the Tensorboard log of the tensorboard folder of the workspace path.
 
-## Running the Evaluation
+<img src="image/total_loss(stage1_sl).png" width="600">
+
+## Running a Evaluation
 After finishing the Supervised Learning, try to test a performance of a trained model.
 
 python run_evaluation.py --workspace_path [root directory of this project] --model_name [Trained Model of the Supervised Learning]
+
+# Run a Reinforcement Learning
+Because of long game play time, normal A2C method can not be used because it should use whole episode once. Therefore, off-policy A2C such as [IMPALA](https://deepmind.com/research/publications/2019/impala-scalable-distributed-deep-rl-importance-weighted-actor-learner-architectures) is needed. It can restore trajectory data from buffer for training like a DQN.
+
+You can run the IMPALA with Supervised model for the Sonic environment by below command.
+
+```
+$ ./run_reinforcement_learning.sh [number of envs] [gpu use] [pretrained model]
+```
+
+You can ignore below error of learner.py part. It does not effect the training process.
+
+```
+Traceback (most recent call last):
+File "C:/minerl/learner.py", line 392, in
+coord.join(thread_data)
+File "C:\Users\sund0\anaconda3\envs\minerl_env\lib\site-packages\tensorflow\python\training\coordinator.py", line 357, in join
+threads = self._registered_threads.union(set(threads))
+
+where line 391 and 392 is
+for thread_data in thread_data_list:
+coord.join(thread_data)
+```
