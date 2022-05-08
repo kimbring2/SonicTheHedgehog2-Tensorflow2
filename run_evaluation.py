@@ -81,10 +81,13 @@ np.random.seed(seed)
 reward_sum = 0
 stage_index = 0
 
-# Create the environment
-env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act1')
+test_stage = ['EmeraldHillZone.Act1', 'EmeraldHillZone.Act2']
 
 for i_episode in range(0, 10000):
+    # Create the environment
+    stage_name = random.choice(test_stage)
+    env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act2')
+
     observation = env.reset()
     observation_resized = cv2.resize(observation, dsize=(64,64), interpolation=cv2.INTER_AREA)
     state = observation_resized / 255.0
@@ -113,6 +116,7 @@ for i_episode in range(0, 10000):
         observation1 = cv2.cvtColor(observation1, cv2.COLOR_BGR2RGB)
         #cv2.imshow("observation1", observation1)
         #cv2.waitKey(1)
+        #print("info: ", info)
 
         observation1_resized = cv2.resize(observation1, dsize=(64,64), interpolation=cv2.INTER_AREA)
         #observation1_resized = cv2.cvtColor(observation1_resized, cv2.COLOR_BGR2RGB)
