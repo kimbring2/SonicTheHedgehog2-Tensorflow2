@@ -87,7 +87,8 @@ You can use that code for training your own Agent.
 ## Running a Supervised Training
 It will save a weight of model to the model folder of the workspace path.
 
-$ python run_supervised_learning.py --workspace_path [root directory of this project]
+$ python run_supervised_learning.py --workspace_path [root directory of this project] --replay_path [root directory of replay file]
+$ python3.7 run_supervised_learning.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/ --replay_path /media/kimbring2/be356a87-def6-4be8-bad2-077951f0f3da/retro-movies/human/SonicTheHedgehog2-Genesis/test/
 
 You can the training progress by watching the Tensorboard log of the tensorboard folder of the workspace path.
 
