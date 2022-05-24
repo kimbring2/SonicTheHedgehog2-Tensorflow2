@@ -97,7 +97,11 @@ You can the training progress by watching the Tensorboard log of the tensorboard
 ## Running a Evaluation
 After finishing the Supervised Learning, try to test a performance of a trained model.
 
-python run_evaluation.py --workspace_path [root directory of this project] --model_name [Trained Model of the Supervised Learning]
+```
+$ python run_evaluation.py --workspace_path [root directory of this project] --model_name [Trained Model of the Supervised Learning]
+
+$ python3.7  run_evaluation.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/ --model_name supervised_model_20900
+```
 
 # Run a Reinforcement Learning
 Because of long game play time, normal A2C method can not be used because it should use whole episode once. Therefore, off-policy A2C such as [IMPALA](https://deepmind.com/research/publications/2019/impala-scalable-distributed-deep-rl-importance-weighted-actor-learner-architectures) is needed. It can restore trajectory data from buffer for training like a DQN.
