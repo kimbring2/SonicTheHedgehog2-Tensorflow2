@@ -100,7 +100,7 @@ After finishing the Supervised Learning, try to test a performance of a trained 
 ```
 $ python run_evaluation.py --workspace_path [root directory of this project] --model_name [Trained Model of the Supervised Learning]
 
-$ python3.7  run_evaluation.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/ --model_name supervised_model_20900
+$ python3.7 run_evaluation.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/ --model_name supervised_model_20900
 ```
 
 # Run a Reinforcement Learning
