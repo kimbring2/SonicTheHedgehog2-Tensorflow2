@@ -24,16 +24,16 @@ parser = argparse.ArgumentParser(description='Sonic Supervised Learning')
 parser.add_argument('--workspace_path', type=str, help='root directory of project')
 parser.add_argument('--pretrained_model', type=str, help='pretrained model name')
 parser.add_argument('--replay_path', type=str, help='root directory of dataset')
-parser.add_argument('--gpu_use', type=bool, default=False, help='use gpu')
+parser.add_argument('--gpu_use', action='store_false', help='use gpu')
 
 arguments = parser.parse_args()
 
-if arguments.gpu_use == True:
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+if arguments.gpu_use:
     gpus = tf.config.experimental.list_physical_devices('GPU')
     tf.config.experimental.set_virtual_device_configuration(gpus[0],
-                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=4000)])
-else:
-    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6000)])
 
 
 workspace_path = arguments.workspace_path
@@ -198,6 +198,14 @@ class TrajetoryDataset(tf.data.Dataset):
 
         env.initial_state = replay.get_state()
         obs = env.reset()
+
+        #obs = 0.299*obs[:,:,0] + 0.587*obs[:,:,1] + 0.114*obs[:,:,2]
+        #obs[obs < 100] = 0
+        #obs[obs >= 100] = 255
+        obs = cv2.resize(obs, dsize=(84,84), interpolation=cv2.INTER_AREA) / 255.0
+
+        #obs_t = np.stack((obs, obs, obs, obs), axis=2)
+
         action_index = 0
 
         obs_list, action_list = [], []
@@ -206,6 +214,9 @@ class TrajetoryDataset(tf.data.Dataset):
 
         print('stepping replay')
         while replay.step():
+            obs_list.append(obs)
+            action_list.append(np.array([action_index]))
+            
             keys = []
             for i in range(len(env.buttons)):
                 key = int(replay.get_key(i, 0))
@@ -217,20 +228,25 @@ class TrajetoryDataset(tf.data.Dataset):
             action_index = possible_action_list.index(converted_action)
             #print("action_index: ", action_index)
 
-            obs_resized = cv2.resize(obs, dsize=(64,64), interpolation=cv2.INTER_AREA)
-            obs_resized = cv2.cvtColor(obs_resized, cv2.COLOR_BGR2RGB)
-            obs_resized = np.reshape(obs_resized,(64,64,3)) / 255.0
+            #obs_resized = cv2.resize(obs, dsize=(64,64), interpolation=cv2.INTER_AREA)
+            #obs_resized = cv2.cvtColor(obs_resized, cv2.COLOR_BGR2RGB)
+            #obs_resized = np.reshape(obs_resized,(64,64,3)) / 255.0
             #stage_layer = np.zeros([64,64,stage_len], dtype=np.float32)
             #stage_layer[:, :, stage_index] = 1.0
 
             #obs_concated = np.concatenate((obs_resized, stage_layer), axis=2)
-            obs_concated = obs_resized
+            #obs_concated = obs_t
 
-            obs_list.append(obs_concated)
-            action_list.append(np.array([action_index]))
+            next_obs, rew, done, info = env.step(converted_action)
 
-            obs, rew, done, info = env.step(converted_action)
+            #next_obs = 0.299*next_obs[:,:,0] + 0.587*next_obs[:,:,1] + 0.114*next_obs[:,:,2]
+            #next_obs[next_obs < 100] = 0
+            #next_obs[next_obs >= 100] = 255
+            next_obs = cv2.resize(next_obs, dsize=(84,84), interpolation=cv2.INTER_AREA) / 255.0
 
+            obs = next_obs
+            #x_t1 = np.reshape(next_obs, (84,84,1))
+            #obs_t = np.append(x_t1, obs_t[:, :, :3], axis=2)
             #env.render()
 
             saved_state = env.em.get_state()
@@ -263,7 +279,7 @@ dataset = tf.data.Dataset.range(1).interleave(TrajetoryDataset,
   num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(1).prefetch(tf.data.experimental.AUTOTUNE)
 
 num_actions = len(possible_action_list)
-num_hidden_units = 512
+num_hidden_units = 1024
 
 #model = tf.keras.models.load_model('MineRL_SL_Model')
 model = network.ActorCritic(num_actions, num_hidden_units)
@@ -333,8 +349,8 @@ def supervised_train(dataset, training_episode):
         replay_obs_list = batch[0][0]
         replay_act_list = batch[1][0]
      
-        memory_state = np.zeros([1,128], dtype=np.float32)
-        carry_state =  np.zeros([1,128], dtype=np.float32)
+        memory_state = np.zeros([1,256], dtype=np.float32)
+        carry_state =  np.zeros([1,256], dtype=np.float32)
         step_length = 32
         total_loss = 0
         for episode_index in range(0, episode_size, step_length):

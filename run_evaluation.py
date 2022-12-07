@@ -31,7 +31,7 @@ arguments = parser.parse_args()
 if arguments.gpu_use == True:
     gpus = tf.config.experimental.list_physical_devices('GPU')
     tf.config.experimental.set_virtual_device_configuration(gpus[0],
-                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=4000)])
+                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=3000)])
 else:
   os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -68,7 +68,7 @@ stage_name_list = ['EmeraldHillZone', 'ChemicalPlantZone', 'AquaticRuinZone', 'C
 stage_len = len(stage_name_list) 
 
 num_actions = len(possible_action_list)
-num_hidden_units = 512
+num_hidden_units = 1024
 
 model = network.ActorCritic(num_actions, num_hidden_units)
 
@@ -83,48 +83,68 @@ stage_index = 0
 
 test_stage = ['EmeraldHillZone.Act1', 'EmeraldHillZone.Act2']
 
+e = 0.05
+
 for i_episode in range(0, 10000):
     # Create the environment
     stage_name = random.choice(test_stage)
-    env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act2')
+    env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act1')
 
-    observation = env.reset()
-    observation_resized = cv2.resize(observation, dsize=(64,64), interpolation=cv2.INTER_AREA)
-    state = observation_resized / 255.0
+    obs = env.reset()
+
+    obs_resized = cv2.resize(obs, dsize=(84,84), interpolation=cv2.INTER_AREA) / 255.0
+    #obs_resized = cv2.cvtColor(obs_resized, cv2.COLOR_BGR2RGB) / 255.0
+
+    #obs = 0.299*obs[:,:,0] + 0.587*obs[:,:,1] + 0.114*obs[:,:,2]
+    #obs[obs < 100] = 0
+    #obs[obs >= 100] = 255
+    #obs = cv2.resize(obs, dsize=(84,84), interpolation=cv2.INTER_AREA) / 255.0
+
+    #obs_t = np.stack((obs, obs, obs, obs), axis=2)
     
-    stage_layer = np.zeros([64,64,stage_len], dtype=np.float32)
-    stage_layer[:, :, stage_index] = 1.0
+    #stage_layer = np.zeros([64,64,stage_len], dtype=np.float32)
+    #stage_layer[:, :, stage_index] = 1.0
     #state = np.concatenate((state, stage_layer), axis=2)
-    state = state
+    state = obs_resized
 
-    memory_state = tf.zeros([1,128], dtype=np.float32)
-    carry_state = tf.zeros([1,128], dtype=np.float32)
+    memory_state = tf.zeros([1,256], dtype=np.float32)
+    carry_state = tf.zeros([1,256], dtype=np.float32)
     step = 0
     while True:
         step += 1
 
         env.render()
 
+        #print("state.shape: ", state.shape)
         action_probs, _, memory_state, carry_state = model(tf.expand_dims(state, 0), memory_state, carry_state)
         action_dist = tfd.Categorical(logits=action_probs)
-        action_index = int(action_dist.sample()[0])
+        
+        #if np.random.rand(1) > e:
+        #    action_index = int(action_dist.sample()[0])
+        #else:
+        #    action_index = random.randint(0, len(possible_action_list) - 1)
 
+        action_index = int(action_dist.sample()[0])
         #print("action_index: ", action_index)
         action = possible_action_list[action_index]
 
-        observation1, reward, done, info = env.step(action)
-        observation1 = cv2.cvtColor(observation1, cv2.COLOR_BGR2RGB)
+        next_obs, reward, done, info = env.step(action)
+        #next_obs = 0.299*next_obs[:,:,0] + 0.587*next_obs[:,:,1] + 0.114*next_obs[:,:,2]
+        #next_obs[next_obs < 100] = 0
+        #next_obs[next_obs >= 100] = 255
+        next_obs_resized = cv2.resize(next_obs, dsize=(84,84), interpolation=cv2.INTER_AREA) / 255.0
+        #x_t1 = np.reshape(next_obs, (84,84,1))
+        #next_obs_t = np.append(x_t1, obs_t[:, :, :3], axis=2)
+        #next_obs_resized = cv2.cvtColor(next_obs_resized, cv2.COLOR_BGR2RGB) / 255.0
         #cv2.imshow("observation1", observation1)
         #cv2.waitKey(1)
         #print("info: ", info)
 
-        observation1_resized = cv2.resize(observation1, dsize=(64,64), interpolation=cv2.INTER_AREA)
-        #observation1_resized = cv2.cvtColor(observation1_resized, cv2.COLOR_BGR2RGB)
-        next_state = observation1_resized / 255.0
-        stage_layer = np.zeros([64,64,stage_len], dtype=np.float32)
-        stage_layer[:, :, stage_index] = 1.0
+        next_state = next_obs_resized
+
+        #stage_layer = np.zeros([64,64,stage_len], dtype=np.float32)
+        #stage_layer[:, :, stage_index] = 1.0
         #next_state = np.concatenate((next_state, stage_layer), axis=2)
-        next_state = next_state
 
         reward_sum += reward
 

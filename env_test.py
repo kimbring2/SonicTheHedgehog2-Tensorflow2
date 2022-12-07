@@ -312,13 +312,13 @@ if test:
         replay_name = random.choice(replay_file_path_list)
         replay_name = replay_name.split('/')[-1]
         
-        print("replay_name: ", replay_name)
+        #print("replay_name: ", replay_name)
         stage_name = replay_name.split('-')
         stage_name = stage_name[2].split('.')[0]
-        print("stage_name: ", stage_name)
+        #print("stage_name: ", stage_name)
         stage_index = stage_name_list.index(stage_name)
-        print("stage_index: ", stage_index)
-        print("")
+        #print("stage_index: ", stage_index)
+        #print("")
         '''
         if replay_name == 'SonicTheHedgehog2-Genesis-WingFortressZone-0004.bk2':
             break_flag = False
@@ -354,10 +354,20 @@ if test:
             obs, rew, done, info = env.step(converted_action)
             #print("obs.shape: ", obs.shape)
             #print("done: ", done)
+            #frame_rgb = 0.299*obs[:,:,0] + 0.587*obs[:,:,1] + 0.114*obs[:,:,2]
 
-            obs = cv2.resize(obs, dsize=(84, 84), interpolation=cv2.INTER_AREA)
-            obs = cv2.cvtColor(obs, cv2.COLOR_BGR2RGB)
-            cv2.imshow("obs", obs)
+            # convert everything to black and white (agent will train faster)
+            #frame_rgb[frame_rgb < 100] = 0
+            #frame_rgb[frame_rgb >= 100] = 255
+
+            frame_rgb1 = cv2.resize(obs, dsize=(512, 512), interpolation=cv2.INTER_AREA)
+            frame_rgb1 = cv2.cvtColor(frame_rgb1, cv2.COLOR_BGR2RGB)
+
+            frame_rgb2 = cv2.cvtColor(obs, cv2.COLOR_BGR2RGB)
+            frame_rgb2 = cv2.resize(frame_rgb2, dsize=(512, 512), interpolation=cv2.INTER_AREA)
+            #print("frame_rgb.shape: ", frame_rgb.shape)
+            cv2.imshow("frame_rgb1", frame_rgb1)
+            cv2.imshow("frame_rgb2", frame_rgb2)
             cv2.waitKey(1)
 
             #env.render()

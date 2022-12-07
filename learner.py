@@ -22,19 +22,18 @@ from parametric_distribution import get_parametric_distribution_for_action_space
 
 parser = argparse.ArgumentParser(description='Sonic IMPALA Server')
 parser.add_argument('--env_num', type=int, default=2, help='ID of environment')
-parser.add_argument('--gpu_use', type=bool, default=False, help='use gpu')
+parser.add_argument('--gpu_use', action='store_false', help='use gpu')
 parser.add_argument('--pretrained_model', type=str, help='pretrained model name')
 arguments = parser.parse_args()
 
 tfd = tfp.distributions
 
-if arguments.gpu_use == True:
-    #gpus = tf.config.experimental.list_physical_devices('GPU')
-    #tf.config.experimental.set_virtual_device_configuration(gpus[0],
-    #            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=4000)])
-    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-else:
-    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+if arguments.gpu_use:
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    tf.config.experimental.set_virtual_device_configuration(gpus[0],
+                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6000)])
 
 
 socket_list = []
@@ -47,24 +46,24 @@ for i in range(0, arguments.env_num):
 
     
 num_actions = 23
-state_size = (64,64,3)    
+state_size = (84,84,3)    
 
-batch_size = 4
+batch_size = 8
 
 unroll_length = 100
 queue = tf.queue.FIFOQueue(1, dtypes=[tf.int32, tf.float32, tf.bool, tf.float32, tf.float32, tf.int32, tf.float32, tf.float32], 
                            shapes=[[unroll_length+1],[unroll_length+1],[unroll_length+1],[unroll_length+1,*state_size],
-                                   [unroll_length+1,num_actions],[unroll_length+1],[unroll_length+1,128],[unroll_length+1,128]])
+                                   [unroll_length+1,num_actions],[unroll_length+1],[unroll_length+1,256],[unroll_length+1,256]])
 Unroll = collections.namedtuple('Unroll', 'env_id reward done observation policy action memory_state carry_state')
 
-num_hidden_units = 512
+num_hidden_units = 1024
 model = network.ActorCritic(num_actions, num_hidden_units)
 sl_model = network.ActorCritic(num_actions, num_hidden_units)
 
 if arguments.pretrained_model != None:
     print("Load Pretrained Model")
     sl_model.load_weights("model/" + arguments.pretrained_model)
-    #model.load_weights("model_tree/" + arguments.pretrained_model)
+    #model.load_weights("model/" + arguments.pretrained_model)
     
 #model.set_weights(sl_model.get_weights())
 
@@ -146,7 +145,7 @@ def update(states, actions, agent_policies, rewards, dones, memory_states, carry
         dist = tfd.Categorical(logits=learner_policies[:-1])
         sl_dist = tfd.Categorical(logits=sl_learner_policies[:-1])
         kl_loss = tfd.kl_divergence(dist, sl_dist)
-        kl_loss = 0.0001 * tf.reduce_mean(kl_loss)
+        kl_loss = 0.001 * tf.reduce_mean(kl_loss)
         
         agent_logits = tf.nn.softmax(agent_policies[:-1])
         actions = actions[:-1]
@@ -216,16 +215,16 @@ def update(states, actions, agent_policies, rewards, dones, memory_states, carry
         critic_loss = baseline_cost * 0.5 * tf.reduce_mean(tf.square(v_error))
             
         entropy = tf.reduce_mean(parametric_action_distribution.entropy(learner_policies[:-1]))
-        entropy_loss =  0.00025 * -entropy
+        entropy_loss = 0.00025 * -entropy
         
-        tf.print("actor_loss: ", actor_loss)
-        tf.print("critic_loss: ", critic_loss)
-        tf.print("entropy_loss: ", entropy_loss)
-        tf.print("kl_loss: ", kl_loss)
-        tf.print("")
+        #tf.print("actor_loss: ", actor_loss)
+        #tf.print("critic_loss: ", critic_loss)
+        #tf.print("entropy_loss: ", entropy_loss)
+        #tf.print("kl_loss: ", kl_loss)
+        #tf.print("")
             
         total_loss = actor_loss + critic_loss + entropy_loss + kl_loss
-        #total_loss = actor_loss + critic_loss + entropy_loss
+        #total_loss = kl_loss
 
     grads = tape.gradient(total_loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
@@ -258,14 +257,14 @@ def Data_Thread(coord, i):
     policies = np.zeros((unroll_length + 1, num_actions), dtype=np.float32)
     rewards = np.zeros((unroll_length + 1), dtype=np.float32)
     dones = np.zeros((unroll_length + 1), dtype=np.bool)
-    memory_states = np.zeros((unroll_length + 1, 128), dtype=np.float32)
-    carry_states = np.zeros((unroll_length + 1, 128), dtype=np.float32)
+    memory_states = np.zeros((unroll_length + 1, 256), dtype=np.float32)
+    carry_states = np.zeros((unroll_length + 1, 256), dtype=np.float32)
 
     memory_index = 0
 
     index = 0
-    memory_state = np.zeros([1,128], dtype=np.float32)
-    carry_state = np.zeros([1,128], dtype=np.float32)
+    memory_state = np.zeros([1,256], dtype=np.float32)
+    carry_state = np.zeros([1,256], dtype=np.float32)
     min_elapsed_time = 5.0
 
     reward_list = []
@@ -311,7 +310,7 @@ def Data_Thread(coord, i):
         index += 1
         if index % 200 == 0:
             average_reward = sum(reward_list[-50:]) / len(reward_list[-50:])
-            print("average_reward: ", average_reward)
+            #print("average_reward: ", average_reward)
 
         end = time.time()
         elapsed_time = end - start
@@ -323,7 +322,6 @@ def Data_Thread(coord, i):
 unroll_queues = []
 unroll_queues.append(queue)
 
-batch_size = 4
 def dequeue(ctx):
     dequeue_outputs = tf.nest.map_structure(
         lambda *args: tf.stack(args), 
@@ -349,6 +347,7 @@ else:
 
 dataset = dataset_fn(0)
 it = iter(dataset)
+
 
 @tf.function
 def minimize(iterator):
