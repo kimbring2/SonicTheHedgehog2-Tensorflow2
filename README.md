@@ -1,5 +1,5 @@
 # SonicTheHedgehog2-Tensorflow2
-This repository is for the Tensorflow 2 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the installation tutorial of (Chang-Chia-Chi)[https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2].  
+This repository is for the Tensorflow 2 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the installation tutorial of [Chang-Chia-Chi](https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2).  
 
 The Sonic Gym environment has total 12 actions originally. Each action are ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"] key of original game pad.
 
