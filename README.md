@@ -1,7 +1,5 @@
 # SonicTheHedgehog2-Tensorflow2
-<img src="image/Sonic-The-Hedgehog-Movie-2020.png" width="600" title="Sonic TheHedgehog Movie 2020">
-
-Tensorflow 2.0 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the install tutorials of reference section.  
+This repository is for the Tensorflow 2 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the install tutorials of reference section.  
 
 Sonic Gym environment has total 12 action dimension originally. Each action means ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"] key of original game pad. 
 
