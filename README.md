@@ -1,7 +1,7 @@
 # SonicTheHedgehog2-Tensorflow2
-This repository is for the Tensorflow 2 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the install tutorials of reference section.  
+This repository is for the Tensorflow 2 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the installation tutorial of (Chang-Chia-Chi)[https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2].  
 
-Sonic Gym environment has total 12 action dimension originally. Each action means ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"] key of original game pad. 
+The Sonic Gym environment has total 12 actions originally. Each action are ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"] key of original game pad.
 
 In game, we need to use only 8 combination of key like a below.
 
@@ -31,7 +31,7 @@ In game, we need to use only 8 combination of key like a below.
 | ['B', 'LEFT', 'RIGHT'] | [1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0] |
 | ['DOWN', 'LEFT', 'RIGHT'] | [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0] |
 
-According to key description, 'A', 'B' are same key. However, I find they show different result at some situation. 
+According to key description, 'A', and 'B' are same key. However, I find that they show different result sometimes. 
 
 Every key combination of replay file can be converted to them.
 
