@@ -74,16 +74,10 @@ You can download the dataset from my [Google Drive](https://drive.google.com/dri
 | AquaticRuinZone.Act2 | [![Human Expert Data of AquaticRuinZone Act2](https://i3.ytimg.com/vi/fuBFcSBd8v8/hqdefault.jpg)](https://youtu.be/fuBFcSBd8v8) |
 
 # How to run code
+Please train the agent by Supervised Learning first and evaluate the performance of model. The agent should do a spin dash action properly. If it looks fine, train the model further by Reinforcement Learning.
 
-## Loading and rendering the expert data
-You can load and render the content of replay file by below command.  
-
-$ python actor.py --replay_path [replay file folder]
-
-You can use that code for training your own Agent.
-
-## Running a Supervised Training
-It will save a weight of model to the model folder of the workspace path.
+## Running a Supervised Learning
+You can use the below command for training your Agent by Supervised Learning. It will save a weight of model to the model folder of the workspace path.
 
 ```
 $ python run_supervised_learning.py --workspace_path [root directory of this project] --replay_path [root directory of replay file]
@@ -104,7 +98,7 @@ $ python run_evaluation.py --workspace_path [root directory of this project] --m
 $ python3.7 run_evaluation.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/ --model_name supervised_model_20900
 ```
 
-# Run a Reinforcement Learning
+# Running a Reinforcement Learning
 Because of long game play time, normal A2C method can not be used because it should use whole episode once. Therefore, off-policy A2C such as [IMPALA](https://deepmind.com/research/publications/2019/impala-scalable-distributed-deep-rl-importance-weighted-actor-learner-architectures) is needed. It can restore trajectory data from buffer for training like a DQN.
 
 You can run the IMPALA with Supervised model for the Sonic environment by below command.
