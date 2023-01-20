@@ -69,7 +69,7 @@ state_list = ['EmeraldHillZone.Act1', 'EmeraldHillZone.Act2']
     #env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act1')
 #else:
     #env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act2')
-env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act1')
+env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act2')
 
 scores = []
 episodes = []
@@ -85,6 +85,7 @@ for episode_step in range(0, 2000000):
     #state = np.concatenate((state, stage_layer), axis=2)
     state = state
 
+    reach_end = False
     game_over = False
     done = False
     reward = 0.0
@@ -92,6 +93,7 @@ for episode_step in range(0, 2000000):
     step = 0
     last_screen_x = 0
     time_out = False
+    die = False
     while True:
         try:
             step += 1
@@ -99,13 +101,13 @@ for episode_step in range(0, 2000000):
             state_reshaped = np.reshape(state, (1,*state_size)) 
 
             env_output = {"env_id": np.array([arguments.env_id]), 
-                          "reward": reward / 10.0,
+                          "reward": reward,
                           "done": done, 
                           "observation": state_reshaped}
             socket.send_pyobj(env_output)
             action_index = int(socket.recv_pyobj()['action'])
 
-            if reward == 1.0 or time_out == True:
+            if time_out == True or die == True or reach_end == True:
                 game_over = True
 
             if arguments.env_id == 0:
@@ -115,27 +117,27 @@ for episode_step in range(0, 2000000):
             action = possible_action_list[action_index]
 
             observation1, _, done, info = env.step(action)
+            #reward = reward / 1000.0
             #print("info: ", info)
 
             screen_x_end = info['screen_x_end']
             screen_x = info['screen_x']
+            lives = info['lives']
 
-            '''
-            reward = 0.0
-            if screen_x - last_screen_x > 1000:
-                last_screen_x = screen_x
-                reward = 0.1
-                print("reward: ", reward)
-            '''
-
-            reward = 0.0
-            if step == 8000 or done == True:
+            reward = 0
+            if step == 10000:
                 #reward = -1.0
-                time_out = True 
+                time_out = True
 
-            if screen_x_end - screen_x < 500:
+            #if screen_x_end - screen_x < 50:
+            if screen_x >= 10920:
                 reward = 1.0
+                reach_end = True
                 #print("reward: ", reward)
+
+            if lives == 2:
+                #reward = -1.0
+                die = True 
 
             observation1_resized = cv2.resize(observation1, dsize=(84,84), interpolation=cv2.INTER_AREA)
             #observation1_resized = cv2.cvtColor(observation1_resized, cv2.COLOR_BGR2RGB)

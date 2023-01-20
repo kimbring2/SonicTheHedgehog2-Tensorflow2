@@ -88,7 +88,7 @@ e = 0.05
 for i_episode in range(0, 10000):
     # Create the environment
     stage_name = random.choice(test_stage)
-    env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act1')
+    env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act2')
 
     obs = env.reset()
 
@@ -110,6 +110,7 @@ for i_episode in range(0, 10000):
     memory_state = tf.zeros([1,256], dtype=np.float32)
     carry_state = tf.zeros([1,256], dtype=np.float32)
     step = 0
+    done = False
     while True:
         step += 1
 
@@ -128,7 +129,7 @@ for i_episode in range(0, 10000):
         #print("action_index: ", action_index)
         action = possible_action_list[action_index]
 
-        next_obs, reward, done, info = env.step(action)
+        next_obs, reward, _, info = env.step(action)
         #next_obs = 0.299*next_obs[:,:,0] + 0.587*next_obs[:,:,1] + 0.114*next_obs[:,:,2]
         #next_obs[next_obs < 100] = 0
         #next_obs[next_obs >= 100] = 255
@@ -141,6 +142,10 @@ for i_episode in range(0, 10000):
         #print("info: ", info)
 
         next_state = next_obs_resized
+        screen_x = info['screen_x']
+        if screen_x >= 10920:
+            done = True
+            #print("reward: ", reward)
 
         #stage_layer = np.zeros([64,64,stage_len], dtype=np.float32)
         #stage_layer[:, :, stage_index] = 1.0
