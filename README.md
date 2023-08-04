@@ -82,7 +82,7 @@ You can use the below command for training your Agent by Supervised Learning. It
 ```
 $ python run_supervised_learning.py --workspace_path [root directory of this project] --replay_path [root directory of replay file]
 
-$ python3.7 run_supervised_learning.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/ --replay_path /media/kimbring2/be356a87-def6-4be8-bad2-077951f0f3da/retro-movies/human/SonicTheHedgehog2-Genesis/test/
+$ python3.7 run_supervised_learning.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/ --replay_path /media/kimbring2/be356a87-def6-4be8-bad2-077951f0f3da/retro-movies/human/SonicTheHedgehog2-Genesis-EmeraldHillZone.Act2.Boss
 ```
 
 You can the training progress by watching the Tensorboard log of the tensorboard folder of the workspace path.
