@@ -88,7 +88,7 @@ $ python3.7 run_supervised_learning.py --workspace_path /home/kimbring2/Sonic-th
 You can the training progress by watching the Tensorboard log of the tensorboard folder of the workspace path.
 
 <img src="image/total_loss(stage1_sl).png" width="600">
-
+  
 ## Running a Evaluation
 After finishing the Supervised Learning, try to test a performance of a trained model.
 
@@ -97,6 +97,14 @@ $ python run_evaluation.py --workspace_path [folder path] --use_action_history [
 
 $ python3.7 run_evaluation.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2 --use_action_history True --model_name supervised_model_1900 --gpu_use True --level_name SonicTheHedgehog2-Genesis-EmeraldHillZone.Act2
 ```
+
+
+# Pretrained Model
+## Without action history
+- EmeraldHillZone.Act2: 
+
+## Using action history
+- [EmeraldHillZone.Act2](https://drive.google.com/drive/folders/1QX2yUjho-zYJjQEUYRcHwLqD2DyoVeBy?usp=sharing)
 
 # Running a Reinforcement Learning
 Because of long game play time, normal A2C method can not be used because it should use whole episode once. Therefore, off-policy A2C such as [IMPALA](https://deepmind.com/research/publications/2019/impala-scalable-distributed-deep-rl-importance-weighted-actor-learner-architectures) is needed. It can restore trajectory data from buffer for training like a DQN.
