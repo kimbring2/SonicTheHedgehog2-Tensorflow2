@@ -17,29 +17,38 @@ import gym
 import os
 import argparse
 import cv2
-
+import time
+import os
 import network
 
 parser = argparse.ArgumentParser(description='Sonic Supervised Learning')
+parser.add_argument('--use_action_history', type=bool, default=False, help='Whether to use action history or not')
 parser.add_argument('--workspace_path', type=str, help='root directory of project')
 parser.add_argument('--pretrained_model', type=str, help='pretrained model name')
 parser.add_argument('--replay_path', type=str, help='root directory of dataset')
 parser.add_argument('--gpu_use', action='store_false', help='use gpu')
+parser.add_argument('--level_name', type=str, help='name of level')
 
 arguments = parser.parse_args()
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-if arguments.gpu_use:
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    tf.config.experimental.set_virtual_device_configuration(gpus[0],
-                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6000)])
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 
 workspace_path = arguments.workspace_path
-replay_path = arguments.replay_path
+use_action_history = arguments.use_action_history
+level_name = arguments.level_name
+replay_path = os.path.join(arguments.replay_path, level_name)
 
-writer = tf.summary.create_file_writer(workspace_path + "/tensorboard")
+#print("use_action_history: ", use_action_history)
+
+if use_action_history:
+    writer = tf.summary.create_file_writer(workspace_path + "/tensorboard_history/" + level_name)
+else:
+    writer = tf.summary.create_file_writer(workspace_path + "/tensorboard/" + level_name)
+
 
 action_conversion_table = {
                 '[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']        
@@ -122,6 +131,8 @@ action_conversion_table = {
                 '[1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
                 '[0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0]' : [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT']
                 '[0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0], # = ['DOWN', RIGHT']
+
+                '[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']
               }
 
 # ['']:                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -147,7 +158,6 @@ action_conversion_table = {
 # ['A', 'RIGHT', 'DOWN']:    [0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]
 # ['B', 'LEFT', 'RIGHT']:    [1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]
 # ['DOWN', 'LEFT', 'RIGHT']: [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0]
-
 
 possible_action_list = [
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -175,23 +185,29 @@ possible_action_list = [
                         [0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]
                        ]
 
+
+num_actions = len(possible_action_list)
+#print("num_actions: ", num_actions)
+
 stage_name_list = ['EmeraldHillZone', 'ChemicalPlantZone', 'AquaticRuinZone', 'CasinoNightZone', 'HillTopZone',
                    'MysticCaveZone', 'OilOceanZone', 'MetropolisZone', 'WingFortressZone']
 stage_len = len(stage_name_list)
 
+env = retro.make(game='SonicTheHedgehog2-Genesis', state=retro.State.NONE, use_restricted_actions=retro.Actions.ALL)
+
+
+def one_hot(a, num_classes):
+  return np.squeeze(np.eye(num_classes)[a])
+
+
 class TrajetoryDataset(tf.data.Dataset):
   def _generator(num_trajectorys):
-    env = retro.make(game='SonicTheHedgehog2-Genesis', state=retro.State.NONE, use_restricted_actions=retro.Actions.ALL)
+    #env = retro.make(game='SonicTheHedgehog2-Genesis', state=retro.State.NONE, use_restricted_actions=retro.Actions.ALL)
 
     while True:
         replay_file_path_list = glob.glob(replay_path + '/*.bk2')
         replay_name = random.choice(replay_file_path_list)
         replay_name = replay_name.split('/')[-1]
-
-        #stage_name = replay_name.split('-')
-        #stage_name = stage_name[2].split('.')[0]
-        #stage_index = stage_name_list.index(stage_name)
-        #print("stage_index: ", stage_index)
 
         replay = retro.Movie(os.path.join(replay_path, replay_name))
         replay.step()
@@ -199,146 +215,181 @@ class TrajetoryDataset(tf.data.Dataset):
         env.initial_state = replay.get_state()
         obs = env.reset()
 
-        #obs = 0.299*obs[:,:,0] + 0.587*obs[:,:,1] + 0.114*obs[:,:,2]
-        #obs[obs < 100] = 0
-        #obs[obs >= 100] = 255
         obs = cv2.resize(obs, dsize=(84,84), interpolation=cv2.INTER_AREA) / 255.0
 
-        #obs_t = np.stack((obs, obs, obs, obs), axis=2)
-
         action_index = 0
+        pre_action_index = 0
 
-        obs_list, action_list = [], []
+        obs_list, action_list, action_history_list = [], [], []
 
         step_num = 0
 
         print('stepping replay')
+
+        action_history = np.zeros((23, num_actions))
+
         while replay.step():
-            obs_list.append(obs)
-            action_list.append(np.array([action_index]))
-            
             keys = []
             for i in range(len(env.buttons)):
                 key = int(replay.get_key(i, 0))
                 keys.append(key)
 
             converted_action = action_conversion_table[str(keys)]
-            #print("converted_action: ", converted_action)
 
+            pre_action_index = action_index
             action_index = possible_action_list.index(converted_action)
-            #print("action_index: ", action_index)
-
-            #obs_resized = cv2.resize(obs, dsize=(64,64), interpolation=cv2.INTER_AREA)
-            #obs_resized = cv2.cvtColor(obs_resized, cv2.COLOR_BGR2RGB)
-            #obs_resized = np.reshape(obs_resized,(64,64,3)) / 255.0
-            #stage_layer = np.zeros([64,64,stage_len], dtype=np.float32)
-            #stage_layer[:, :, stage_index] = 1.0
-
-            #obs_concated = np.concatenate((obs_resized, stage_layer), axis=2)
-            #obs_concated = obs_t
 
             next_obs, rew, done, info = env.step(converted_action)
-
-            #next_obs = 0.299*next_obs[:,:,0] + 0.587*next_obs[:,:,1] + 0.114*next_obs[:,:,2]
-            #next_obs[next_obs < 100] = 0
-            #next_obs[next_obs >= 100] = 255
             next_obs = cv2.resize(next_obs, dsize=(84,84), interpolation=cv2.INTER_AREA) / 255.0
 
+            ########################################################################################
+            obs_list.append(obs)
+
+            action_list.append(np.array([action_index]))
+
+            pre_action_onehot = one_hot(pre_action_index, num_actions)
+            action_history = np.roll(action_history, 1, axis=0)
+            action_history[0,:] = pre_action_onehot
+            action_history_temp = np.expand_dims(action_history, axis=2)
+            action_history_list.append(action_history_temp)
+            ########################################################################################
+
             obs = next_obs
-            #x_t1 = np.reshape(next_obs, (84,84,1))
-            #obs_t = np.append(x_t1, obs_t[:, :, :3], axis=2)
-            #env.render()
 
             saved_state = env.em.get_state()
             step_num += 1
 
-            #if step_num == 100:
-            #    break
-
-        yield (obs_list, action_list)
-        '''
-        list_len = len(obs_list)
-
-        sample = random.random()
-        print("sample: ", sample)
-        if sample > 0.5:
-            yield (obs_list[0:int(list_len / 2)], action_list[0:int(list_len / 2)])
-        else:
-            yield (obs_list[int(list_len / 2):], action_list[int(list_len / 2):])
-        '''
+        yield (obs_list, action_list, action_history_list)
         break
 
   def __new__(cls, num_trajectorys=3):
       return tf.data.Dataset.from_generator(
           cls._generator,
-          output_types=(tf.dtypes.float32, tf.dtypes.int32),
+          output_types=(tf.dtypes.float32, tf.dtypes.int32, tf.dtypes.float32),
           args=(num_trajectorys,)
       )
 
 dataset = tf.data.Dataset.range(1).interleave(TrajetoryDataset, 
   num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(1).prefetch(tf.data.experimental.AUTOTUNE)
 
-num_actions = len(possible_action_list)
+
 num_hidden_units = 1024
 
 #model = tf.keras.models.load_model('MineRL_SL_Model')
-model = network.ActorCritic(num_actions, num_hidden_units)
+model = network.ActorCritic(num_actions, num_hidden_units, use_action_history)
+
 
 if arguments.pretrained_model != None:
     print("Load Pretrained Model")
-    model.load_weights("model/" + arguments.pretrained_model)
+    if use_action_history:
+        model.load_weights(workspace_path + '/model_history/' + level_name + '/' + arguments.pretrained_model)
+    else:
+        model.load_weights(workspace_path + '/model/' + level_name + '/' + arguments.pretrained_model)
 
-    
+    #model.load_weights("model/" + arguments.pretrained_model)
+
+
 cce_loss = tf.keras.losses.CategoricalCrossentropy()
 cce_loss_logits = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
+
 optimizer = tf.keras.optimizers.Adam(0.0001)
 
 
 @tf.function
-def supervised_replay(replay_obs_list, replay_act_list, memory_state, carry_state):
+def supervised_replay(replay_obs_list, replay_act_list, replay_act_history_list, memory_state_obs, carry_state_obs,
+                      memory_state_his, carry_state_his):
     replay_obs_array = tf.concat(replay_obs_list, 0)
     replay_act_array = tf.concat(replay_act_list, 0)
+    replay_act_history_array = tf.concat(replay_act_history_list, 0)
 
-    replay_memory_state_array = tf.concat(memory_state, 0)
-    replay_carry_state_array = tf.concat(carry_state, 0)
+    replay_memory_state_obs_array = tf.concat(memory_state_obs, 0)
+    replay_carry_state_obs_array = tf.concat(carry_state_obs, 0)
 
-    memory_state = replay_memory_state_array
-    carry_state = replay_carry_state_array
+    replay_memory_state_his_array = tf.concat(memory_state_his, 0)
+    replay_carry_state_his_array = tf.concat(carry_state_his, 0)
+
+    memory_state_obs = replay_memory_state_obs_array
+    carry_state_obs = replay_carry_state_obs_array
+    memory_state_his = replay_memory_state_his_array
+    carry_state_his = replay_carry_state_his_array
 
     batch_size = replay_obs_array.shape[0]
     #tf.print("batch_size: ", batch_size)
     
     with tf.GradientTape() as tape:
         act_probs = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
+        cvae_losses = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
         for i in tf.range(0, batch_size):
-            prediction = model(tf.expand_dims(replay_obs_array[i,:,:,:], 0), memory_state, carry_state, 
-                                training=True)
+            prediction = model(tf.expand_dims(replay_obs_array[i,:,:,:], 0), 
+                               tf.expand_dims(replay_act_history_array[i,:,:,:], 0),
+                               memory_state_obs, carry_state_obs, memory_state_his, carry_state_his, 
+                               training=True)
             act_pi = prediction[0]
-            memory_state = prediction[2]
-            carry_state = prediction[3]
-        
+            memory_state_obs = prediction[2]
+            carry_state_obs = prediction[3]
+            memory_state_his = prediction[4]
+            carry_state_his = prediction[5]
+            cvae_loss = prediction[6]
+            
             act_probs = act_probs.write(i, act_pi[0])
+            cvae_losses = cvae_losses.write(i, cvae_loss)
 
         act_probs = act_probs.stack()
-
-        #tf.print("replay_act_array: ", replay_act_array)
-        #tf.print("tf.argmax(act_probs, 1): ", tf.argmax(act_probs, 1))
+        cvae_losses = cvae_losses.stack()
 
         replay_act_array_onehot = tf.one_hot(replay_act_array, num_actions)
         replay_act_array_onehot = tf.reshape(replay_act_array_onehot, (batch_size, num_actions))
         act_loss = cce_loss_logits(replay_act_array_onehot, act_probs)
 
-        #tf.print("act_loss: ", act_loss)
+        cvae_loss = -tf.reduce_mean(cvae_losses)
+
         regularization_loss = tf.reduce_sum(model.losses)
-        total_loss = act_loss + 1e-5 * regularization_loss
-    
-        #tf.print("total_loss: ", total_loss)
-        #tf.print("")
-        
+
+        total_loss = act_loss + 1e-5 * regularization_loss + cvae_loss
+
     grads = tape.gradient(total_loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    return total_loss, memory_state, carry_state
+    return act_loss, cvae_loss, memory_state_obs, carry_state_obs, memory_state_his, carry_state_his
+
+
+
+def generate_and_save_images(model, epoch):
+    batch_size = 16
+    num_examples_to_generate = 16
+
+    # Pick a sample of the test set for generating output images
+    assert batch_size >= num_examples_to_generate
+    for test_batch in dataset.take(1):
+        episode_size = test_batch[0].shape[1]
+        #print("episode_size: ", episode_size)
+        # episode_size:  2007
+    
+        replay_obs_list = test_batch[0][0]
+        # replay_obs_list.shape:  (2007, 80, 80, 3)
+        #print("replay_obs_list.shape: ", replay_obs_list.shape)
+
+        start_index = random.randint(0, episode_size - 33)
+
+        test_sample = replay_obs_list[start_index:start_index + batch_size,:,:,:]
+
+    #print("test_sample.shape: ", test_sample.shape)
+
+    mean, logvar = model.encode(test_sample)
+    z = model.reparameterize(mean, logvar)
+    predictions = model.sample(z)
+    #print("predictions.shape: ", predictions.shape)
+
+    fig = plt.figure(figsize=(4, 4))
+
+    for i in range(predictions.shape[0]):
+        plt.subplot(4, 4, i + 1)
+        plt.imshow(predictions[i, :, :, 0], cmap='gray')
+        plt.axis('off')
+
+    # tight_layout minimizes the overlap between 2 sub-plots
+    plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
+    #plt.show()
 
 
 def supervised_train(dataset, training_episode):
@@ -348,34 +399,47 @@ def supervised_train(dataset, training_episode):
     
         replay_obs_list = batch[0][0]
         replay_act_list = batch[1][0]
-     
-        memory_state = np.zeros([1,256], dtype=np.float32)
-        carry_state =  np.zeros([1,256], dtype=np.float32)
-        step_length = 32
+        replay_act_history_list = batch[2][0]
+
+        memory_state_obs = np.zeros([1,256], dtype=np.float32)
+        carry_state_obs =  np.zeros([1,256], dtype=np.float32)
+        memory_state_his = np.zeros([1,256], dtype=np.float32)
+        carry_state_his =  np.zeros([1,256], dtype=np.float32)
+
+        step_length = 128
         total_loss = 0
         for episode_index in range(0, episode_size, step_length):
             obs = replay_obs_list[episode_index:episode_index+step_length,:,:,:]
             act = replay_act_list[episode_index:episode_index+step_length,:]
+            act_history = replay_act_history_list[episode_index:episode_index+step_length,:,:,:]
             
             #print("episode_index: ", episode_index)
             if len(obs) != step_length:
                 break
             
-            total_loss, next_memory_state, next_carry_state = supervised_replay(obs, act,
-                                                                                memory_state, carry_state)
-            memory_state = next_memory_state
-            carry_state = next_carry_state
-        
+            act_loss, cvae_loss, memory_state_obs, carry_state_obs, memory_state_his, carry_state_his = supervised_replay(obs, act, 
+                                                                                                                          act_history,
+                                                                                                                          memory_state_obs, 
+                                                                                                                          carry_state_obs,
+                                                                                                                          memory_state_his, 
+                                                                                                                          carry_state_his)
+    
             #print("total_loss: ", total_loss)
             #print("")
             
         with writer.as_default():
             #print("training_episode: ", training_episode)
-            tf.summary.scalar("total_loss", total_loss, step=training_episode)
+            tf.summary.scalar("act_loss", act_loss, step=training_episode)
+            tf.summary.scalar("cvae_loss", cvae_loss, step=training_episode)
             writer.flush()
 
         if training_episode % 100 == 0:
-            model.save_weights(workspace_path + '/model/supervised_model_' + str(training_episode))
+            if use_action_history:
+                model.save_weights(workspace_path + '/model_history/' + level_name + '/supervised_model_' + str(training_episode))
+            else:
+                model.save_weights(workspace_path + '/model/' + level_name + '/supervised_model_' + str(training_episode))
+
+            generate_and_save_images(model.CVAE, training_episode)
             
         
 for training_episode in range(0, 2000000):
