@@ -29,14 +29,12 @@ arguments = parser.parse_args()
 
 tfd = tfp.distributions
 
-#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+if gpu_use:
+    physical_devices = tf.config.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+else:
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-#if arguments.gpu_use:
-#    gpus = tf.config.experimental.list_physical_devices('GPU')
-#    tf.config.experimental.set_virtual_device_configuration(gpus[0],
-#                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6000)])
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 socket_list = []
 for i in range(0, arguments.env_num):

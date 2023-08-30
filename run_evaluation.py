@@ -30,14 +30,16 @@ parser.add_argument('--level_name', type=str, help='name of level')
 
 arguments = parser.parse_args()
 
-#os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
-
 workspace_path = arguments.workspace_path
 use_action_history = arguments.use_action_history
 level_name = arguments.level_name
+gpu_use = arguments.gpu_use
+
+if gpu_use:
+    physical_devices = tf.config.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+else:
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 possible_action_list = [
