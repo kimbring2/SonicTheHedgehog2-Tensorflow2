@@ -80,9 +80,9 @@ Please train the agent by Supervised Learning first and evaluate the performance
 You can use the below command for training your Agent by Supervised Learning. It will save a weight of model to the model folder of the workspace path.
 
 ```
-$ python run_supervised_learning.py --workspace_path [root directory of this project] --replay_path [root directory of replay file]
+$ python run_supervised_learning.py --workspace_path [folder path] --gpu_use [True, Fasle] --replay_path [folder path] --level_name [level name] --use_action_history [True, False]
 
-$ python3.7 run_supervised_learning.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/ --replay_path /media/kimbring2/be356a87-def6-4be8-bad2-077951f0f3da/retro-movies/human/SonicTheHedgehog2-Genesis-EmeraldHillZone.Act2.Boss
+$ python3.7 run_supervised_learning.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2 --replay_path /media/kimbring2/be356a87-def6-4be8-bad2-077951f0f3da/retro-movies/human/SonicTheHedgehog2-Genesis/contest --level_name SonicTheHedgehog2-Genesis-EmeraldHillZone.Act2 --use_action_history True
 ```
 
 You can the training progress by watching the Tensorboard log of the tensorboard folder of the workspace path.
@@ -93,9 +93,9 @@ You can the training progress by watching the Tensorboard log of the tensorboard
 After finishing the Supervised Learning, try to test a performance of a trained model.
 
 ```
-$ python run_evaluation.py --workspace_path [root directory of this project] --model_name [Trained Model of the Supervised Learning]
+$ python run_evaluation.py --workspace_path [folder path] --use_action_history [True, False] --model_name [file name] --gpu_use [True, Fasle] --level_name [level name]
 
-$ python3.7 run_evaluation.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2/ --model_name supervised_model_20900
+$ python3.7 run_evaluation.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2 --use_action_history True --model_name supervised_model_1900 --gpu_use True --level_name SonicTheHedgehog2-Genesis-EmeraldHillZone.Act2
 ```
 
 # Running a Reinforcement Learning
