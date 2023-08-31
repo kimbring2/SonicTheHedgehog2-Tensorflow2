@@ -101,7 +101,7 @@ $ python3.7 run_evaluation.py --workspace_path /home/kimbring2/Sonic-the-Hedgeho
 
 # Pretrained Model
 ## Without action history
-- EmeraldHillZone.Act2: 
+- [EmeraldHillZone.Act2](https://drive.google.com/drive/folders/1CiyL2vzFSRBdrxTkmVlzgQnrmr3MP9fJ?usp=sharing)
 
 ## Using action history
 - [EmeraldHillZone.Act2](https://drive.google.com/drive/folders/1QX2yUjho-zYJjQEUYRcHwLqD2DyoVeBy?usp=sharing)
