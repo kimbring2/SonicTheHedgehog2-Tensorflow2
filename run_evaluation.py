@@ -15,7 +15,6 @@ from matplotlib import pyplot as plt
 from tensorflow.keras import layers
 from typing import Any, List, Sequence, Tuple
 from absl import flags
-
 import network
 
 tfd = tfp.distributions
@@ -23,19 +22,33 @@ tfd = tfp.distributions
 parser = argparse.ArgumentParser(description='Sonic Evaluation')
 
 parser.add_argument('--workspace_path', type=str, help='root directory of project')
-parser.add_argument('--use_action_history', type=bool, default=False, help='Whether to use action history or not')
+parser.add_argument('--use_action_history', action='store_true', default=False)
+parser.add_argument('--gpu_use', action='store_true', default=False)
 parser.add_argument('--model_name', type=str, help='name of saved model')
-parser.add_argument('--gpu_use', type=bool, default=False, help='use gpu')
 parser.add_argument('--level_name', type=str, help='name of level')
 
 arguments = parser.parse_args()
+
+
+def t_or_f(arg):
+    ua = str(arg).upper()
+    if 'TRUE'.startswith(ua):
+       return True
+    elif 'FALSE'.startswith(ua):
+       return False
+    else:
+       pass  #error condition maybe?
+
 
 workspace_path = arguments.workspace_path
 use_action_history = arguments.use_action_history
 level_name = arguments.level_name
 gpu_use = arguments.gpu_use
 
-if gpu_use:
+print("use_action_history: ", use_action_history)
+print("gpu_use: ", gpu_use)
+
+if gpu_use == True:
     physical_devices = tf.config.list_physical_devices('GPU')
     tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 else:
@@ -78,7 +91,7 @@ num_hidden_units = 1024
 
 model = network.ActorCritic(num_actions, num_hidden_units, use_action_history)
 
-if use_action_history:
+if use_action_history == True:
     model.load_weights(workspace_path + '/model_history/' + level_name + '/' + arguments.model_name)
 else:
     model.load_weights(workspace_path + '/model/' + level_name + '/' + arguments.model_name)

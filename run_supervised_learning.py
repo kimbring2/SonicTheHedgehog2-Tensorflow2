@@ -22,12 +22,12 @@ import os
 import network
 
 parser = argparse.ArgumentParser(description='Sonic Supervised Learning')
-parser.add_argument('--use_action_history', type=bool, default=False, help='Whether to use action history or not')
 parser.add_argument('--workspace_path', type=str, help='root directory of project')
 parser.add_argument('--pretrained_model', type=str, help='pretrained model name')
 parser.add_argument('--replay_path', type=str, help='root directory of dataset')
-parser.add_argument('--gpu_use', action='store_false', help='use gpu')
 parser.add_argument('--level_name', type=str, help='name of level')
+parser.add_argument('--use_action_history', action='store_true', default=False)
+parser.add_argument('--gpu_use', action='store_true', default=False)
 
 arguments = parser.parse_args()
 
@@ -36,7 +36,7 @@ use_action_history = arguments.use_action_history
 level_name = arguments.level_name
 gpu_use = arguments.gpu_use
 
-if gpu_use:
+if gpu_use == True:
     physical_devices = tf.config.list_physical_devices('GPU')
     tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 else:
@@ -45,7 +45,7 @@ else:
 
 replay_path = os.path.join(arguments.replay_path, level_name)
 
-if use_action_history:
+if use_action_history == True:
     writer = tf.summary.create_file_writer(workspace_path + "/tensorboard_history/" + level_name)
 else:
     writer = tf.summary.create_file_writer(workspace_path + "/tensorboard/" + level_name)
