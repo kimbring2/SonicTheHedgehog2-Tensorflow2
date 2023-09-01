@@ -1,41 +1,9 @@
 # SonicTheHedgehog2-Tensorflow2
-This repository is for the Tensorflow 2 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the installation tutorial of [Chang-Chia-Chi](https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2).  
+This repository is for the Tensorflow 2 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the installation tutorial of [Chang-Chia-Chi](https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2).
 
-The Sonic Gym environment has total 12 actions originally. Each action are ["B", "A", "MODE", "START", "UP", "DOWN", "LEFT", "RIGHT", "C", "Y", "X", "Z"] key of original game pad.
+Please visit the Medium post to see the detatiled instucrtions about this poject.
 
-In game, we need to use only 8 combination of key like a below.
-
-| String Key |  Binary Converted Key |
-| ------------- | ------------- |
-| [''] | [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] |
-| ['LEFT'] | [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0] |
-| ['RIGHT'] | [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0] |
-| ['A'] | [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] |
-| ['B'] | [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] |
-| ['DOWN'] | [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0] |
-| ['UP'] | [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] |
-| ['B', 'LEFT'] | [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0] |
-| ['B', 'RIGHT'] | [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0] |
-| ['B', 'DOWN'] | [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0] |
-| ['A', 'LEFT'] | [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0] |
-| ['A', 'RIGHT'] | [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0] |
-| ['A', 'DOWN'] | [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0] |
-| ['DOWN', 'RIGHT'] | [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0] |
-| ['DOWN', 'LEFT'] | [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] |
-| ['LEFT', 'RIGHT'] | [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0] |
-| ['B', 'RIGHT', 'DOWN'] | [0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0] |
-| ['B', 'LEFT', 'DOWN'] | [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] |
-| ['A', 'LEFT', 'DOWN'] | [0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] |
-| ['A', 'LEFT', 'RIGHT'] | [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0] | 
-| ['A', 'RIGHT', 'DOWN'] | [0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0] |
-| ['B', 'LEFT', 'RIGHT'] | [1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0] |
-| ['DOWN', 'LEFT', 'RIGHT'] | [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0] |
-
-According to key description, 'A', and 'B' are same key. However, I find that they show different result sometimes. 
-
-Every key combination of replay file can be converted to them.
-
-In this environment, Agent need to travel the map for reaching the final location by passing various traps and monsters. At some Act, Agent need to defeat the boss monster at the final point. 
+[Playing Sonic The Hedgehog 2 using Deep Learning — Part 1](https://medium.com/ai-mind-labs/playing-sonic-the-hedgehog-2-using-deep-learning-part-1-5e16c8fa802d)
 
 # Python Dependencies
 1. gym                     0.14.0
