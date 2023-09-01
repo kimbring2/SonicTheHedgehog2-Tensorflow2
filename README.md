@@ -7,7 +7,7 @@ Please visit the Medium post to see the detatiled instucrtions about this poject
 # How to find the Sonic2 ROM
 Originally, you can install the Sonic 2 environment by buying the game from the Steam and follow the installation tutorial of [Chang-Chia-Chi](https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2).
 
-However, the steam stop to sell the Sonic2 game alone. Instead, they are selling the bunder pack of all Sega game from [Sega Mega Drive & Genesis Classics on Steam](Sega Mega Drive & Genesis Classics on Steam). I assume that Sonic 2 Rom file also is included inside of it. 
+However, the steam stop to sell the Sonic2 game alone. Instead, they are selling the bunder pack of all Sega game from [Sega Mega Drive & Genesis Classics on Steam](https://store.steampowered.com/app/34270/SEGA_Mega_Drive_and_Genesis_Classics/). I assume that Sonic2 Rom file also is included inside of it, but not sure.
 
 Anyway, you need to import the found ROM file from below Python command.
 ```
