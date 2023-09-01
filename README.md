@@ -1,8 +1,20 @@
 # SonicTheHedgehog2-Tensorflow2
-This repository is for the Tensorflow 2 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the installation tutorial of [Chang-Chia-Chi](https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2).
+This repository is for the Tensorflow 2 code for training the SonicTheHedgehog2 with human expert data.
 
 Please visit the Medium post to see the detatiled instucrtions about this poject.
 - [Playing Sonic The Hedgehog 2 using Deep Learning — Part 1](https://medium.com/ai-mind-labs/playing-sonic-the-hedgehog-2-using-deep-learning-part-1-5e16c8fa802d)
+
+# How to find the Sonic2 ROM
+Originally, you can install the Sonic 2 environment by buying the game from the Steam and follow the installation tutorial of [Chang-Chia-Chi](https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2).
+
+However, the steam stop to sell the Sonic2 game alone. Instead, they are selling the bunder pack of all Sega game from [Sega Mega Drive & Genesis Classics on Steam](Sega Mega Drive & Genesis Classics on Steam). I assume that Sonic 2 Rom file also is included inside of it. 
+
+Anyway, you need to import the found ROM file from below Python command.
+```
+python3 -m retro.import /path/to/your/ROMs/directory/
+```
+
+Sorry for not uploading the ROM file on this repo. 
 
 # Python Dependencies
 1. gym                     0.14.0
