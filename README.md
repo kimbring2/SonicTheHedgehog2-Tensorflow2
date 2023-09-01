@@ -2,8 +2,7 @@
 This repository is for the Tensorflow 2 code for training the SonicTheHedgehog2 with human expert data. You need to buy the Sonic the Hedgehog 2 game from the Steam to test it. After buying it, please follow the installation tutorial of [Chang-Chia-Chi](https://github.com/Chang-Chia-Chi/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2).
 
 Please visit the Medium post to see the detatiled instucrtions about this poject.
-
-[Playing Sonic The Hedgehog 2 using Deep Learning — Part 1](https://medium.com/ai-mind-labs/playing-sonic-the-hedgehog-2-using-deep-learning-part-1-5e16c8fa802d)
+- [Playing Sonic The Hedgehog 2 using Deep Learning — Part 1](https://medium.com/ai-mind-labs/playing-sonic-the-hedgehog-2-using-deep-learning-part-1-5e16c8fa802d)
 
 # Python Dependencies
 1. gym                     0.14.0
@@ -65,7 +64,6 @@ $ python run_evaluation.py --workspace_path [folder path] --use_action_history [
 
 $ python3.7 run_evaluation.py --workspace_path /home/kimbring2/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2 --use_action_history True --model_name supervised_model_1900 --gpu_use True --level_name SonicTheHedgehog2-Genesis-EmeraldHillZone.Act2
 ```
-
 
 # Pretrained Model
 ## Without action history
