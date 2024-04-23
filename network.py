@@ -23,10 +23,8 @@ class CVAE(tf.keras.Model):
                 layers.InputLayer(input_shape=(latent_dim,)),
                 layers.Dense(units=20*20*32, activation=tf.nn.relu),
                 layers.Reshape(target_shape=(20, 20, 32)),
-                layers.Conv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same',
-                                                activation='relu'),
-                layers.Conv2DTranspose(filters=32, kernel_size=3, strides=2, padding='same',
-                                                activation='relu'),
+                layers.Conv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same', activation='relu'),
+                layers.Conv2DTranspose(filters=32, kernel_size=3, strides=2, padding='same', activation='relu'),
                 layers.Conv2DTranspose(filters=3, kernel_size=3, strides=1, padding='same')
             ]
         )
@@ -131,8 +129,7 @@ class ActorCritic(tf.keras.Model):
     conv_4_reshaped = layers.Reshape((16, 32))(conv_4)
 
     initial_state = (memory_state, carry_state)
-    lstm_output, final_memory_state, final_carry_state  = self.lstm(conv_4_reshaped, initial_state=initial_state, 
-                                                                    training=training)
+    lstm_output, final_memory_state, final_carry_state  = self.lstm(conv_4_reshaped, initial_state=initial_state, training=training)
     
     X_input = layers.Flatten()(lstm_output)
     #tf.print("X_input.shape: ", X_input.shape)
@@ -152,14 +149,20 @@ class InverseActionPolicy(tf.keras.Model):
     self.num_actions = num_actions
     #self.input_shape =(1, 32, 84, 84, 3)
 
+    '''
     self.conv2d_lstm_1 = layers.ConvLSTM2D(filters=64, kernel_size=(5, 5), padding="same", return_sequences=True, activation="relu")
     self.batch_normalization_1 = layers.BatchNormalization()
     self.conv2d_lstm_2 = layers.ConvLSTM2D(filters=64, kernel_size=(3, 3), padding="same", return_sequences=True, activation="relu")
     self.batch_normalization_2 = layers.BatchNormalization()
     self.conv2d_lstm_3 = layers.ConvLSTM2D(filters=64, kernel_size=(1, 1), padding="same", return_sequences=True, activation="relu")
-    self.conv3d = layers.Conv3D(filters=1, kernel_size=(3, 3, 3), activation="sigmoid", padding="same")
+    '''
+    self.conv3d_1 = layers.Conv3D(filters=64, kernel_size=(5, 5, 5), padding="same")
+    self.conv3d_2 = layers.Conv3D(filters=64, kernel_size=(3, 3, 3), padding="same")
+    self.conv3d_3 = layers.Conv3D(filters=64, kernel_size=(1, 1, 1), padding="same")
 
     self.common = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
+    self.layer_normalization = layers.LayerNormalization()
+
     self.actor = layers.Dense(num_actions, kernel_regularizer='l2')
 
   def get_config(self):
@@ -169,22 +172,35 @@ class InverseActionPolicy(tf.keras.Model):
     return config
     
   def call(self, inputs: tf.Tensor, training) -> Tuple[tf.Tensor, tf.Tensor]:
-    print("inputs.shape: ", inputs.shape)
+    # inputs.shape:  (1, 8, 64, 64, 3)
+    batch_size = inputs.shape[0]
+    time_step = inputs.shape[1]
 
-    batch_size = tf.shape(inputs)[0]
+    #print("inputs.shape: ", inputs.shape)
 
-    x = self.conv2d_lstm_1(inputs)
-    print("x.shape 1: ", x.shape)
+    conv3d_1 = self.conv3d_1(inputs)
+    conv3d_1 = layers.LayerNormalization()(conv3d_1)
+    conv3d_1 = layers.ReLU()(conv3d_1)
+    #print("conv3d_1.shape: ", conv3d_1.shape)
 
-    x = self.batch_normalization_1(x)
-    x = self.conv2d_lstm_2(x)
-    x = self.batch_normalization_2(x)
-    x = self.conv2d_lstm_3(x)
-    x = self.conv3d(x)
+    conv3d_2 = self.conv3d_2(conv3d_1)
+    conv3d_2 = layers.LayerNormalization()(conv3d_2)
+    conv3d_2 = layers.ReLU()(conv3d_2)
+    #print("conv3d_2.shape: ", conv3d_2.shape)
 
-    print("x.shape: ", x.shape)
+    conv3d_3 = self.conv3d_3(conv3d_2)
+    conv3d_3 = layers.LayerNormalization()(conv3d_3)
+    conv3d_3 = layers.ReLU()(conv3d_3)
+    #print("conv3d_3.shape: ", conv3d_3.shape)
 
-    X_input = layers.Flatten()(x)
-    x = self.common(X_input)
+    conv3d_reshaped = tf.reshape(conv3d_3, [batch_size, time_step, -1])
+    #print("conv3d_reshaped.shape: ", conv3d_reshaped.shape)
+
+    common = self.common(conv3d_reshaped)
+    #print("common.shape: ", common.shape)
+
+    pi_latent  = self.actor(common)
+
+    #print("pi_latent.shape: ", pi_latent.shape)
     
-    return self.actor(x), self.actor(x)
+    return pi_latent
