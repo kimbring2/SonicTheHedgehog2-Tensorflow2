@@ -1,4 +1,3 @@
-from matplotlib import pyplot as plt
 from tensorflow.keras import layers
 from typing import Any, List, Sequence, Tuple
 from collections import deque, defaultdict
@@ -221,6 +220,7 @@ class TrajetoryDataset(tf.data.Dataset):
 
         print('stepping replay')
         while replay.step():
+            #env.render()
             #print("step_num: ", step_num)
 
             obs_history_list.append(obs_history)
@@ -239,8 +239,6 @@ class TrajetoryDataset(tf.data.Dataset):
                 keys.append(key)
 
             converted_action = action_conversion_table[str(keys)]
-
-            pre_action_index = action_index
             action_index = possible_action_list.index(converted_action)
 
             next_obs, rew, done, info = env.step(converted_action)
@@ -248,14 +246,24 @@ class TrajetoryDataset(tf.data.Dataset):
 
             obs = next_obs
 
-            saved_state = env.em.get_state()
+            #cv2.imshow('obs', obs)
+            #cv2.waitKey(1)
 
-            #if step_num == 20:
-            #    break
+            saved_state = env.em.get_state()
+            
+            if len(obs_history_list) == 8:
+                yield (obs_history_list, action_history_list)
+                action_history_list, obs_history_list = [], []
+                #obs_history = np.zeros((8, 64, 64, 3))
+                #action_history = np.zeros((8, len(possible_action_list)))
+                #step_num = 0
+                #break
+            
 
             step_num += 1
 
-        yield (obs_history_list, action_history_list)
+        #yield (obs_history_list, action_history_list)
+        break
 
   def __new__(cls, num_trajectorys=3):
       return tf.data.Dataset.from_generator(
@@ -268,9 +276,8 @@ dataset = tf.data.Dataset.range(1).interleave(TrajetoryDataset,
   num_parallel_calls=tf.data.experimental.AUTOTUNE).batch(1).prefetch(tf.data.experimental.AUTOTUNE)
 
 
-    
 num_actions = len(possible_action_list)
-num_hidden_units = 1024
+num_hidden_units = 2048
 
 #model = tf.keras.models.load_model('MineRL_SL_Model')
 model = network.InverseActionPolicy(num_actions, num_hidden_units)
@@ -286,12 +293,14 @@ optimizer = tf.keras.optimizers.Adam(0.0001)
 
 
 #@tf.function
-def supervised_replay(replay_obs_list, replay_act_list):
+def supervised_replay(replay_obs_list, replay_act_list, memory_state, carry_state):
     replay_obs_array = tf.concat(replay_obs_list, 0)
     replay_act_array = tf.concat(replay_act_list, 0)
-
     #print("replay_obs_array.shape: ", replay_obs_array.shape)
     #print("replay_act_array.shape: ", replay_act_array.shape)
+
+    memory_state = tf.concat(memory_state, 0)
+    carry_state = tf.concat(carry_state, 0)
 
     batch_size = replay_obs_array.shape[0]
     #tf.print("batch_size: ", batch_size)
@@ -300,9 +309,11 @@ def supervised_replay(replay_obs_list, replay_act_list):
         act_probs = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
         for i in tf.range(0, batch_size):
             #print("tf.expand_dims(replay_obs_array[i,:,:,:,:], 0).shape: ", tf.expand_dims(replay_obs_array[i,:,:,:,:], 0).shape)
-            prediction = model(tf.expand_dims(replay_obs_array[i,:,:,:,:], 0), training=True)
+            prediction = model(tf.expand_dims(replay_obs_array[i,:,:,:,:], 0), memory_state, carry_state, training=True)
             #print("prediction.shape: ", prediction.shape)
-            act_pi = prediction[0]
+            act_pi = prediction[0][0]
+            memory_state = prediction[1]
+            carry_state = prediction[2]
         
             act_probs = act_probs.write(i, act_pi)
 
@@ -321,23 +332,27 @@ def supervised_replay(replay_obs_list, replay_act_list):
     grads = tape.gradient(total_loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-    return actor_loss
+    return total_loss, memory_state, carry_state
 
 
 def supervised_train(dataset, training_episode):
     print("training_episode: ", training_episode)
+    train_losses = []
     for batch in dataset:
         episode_size = batch[0].shape[1]
         #print("episode_size: ", episode_size)
 
         replay_obs_array = batch[0][0]
         replay_act_array = batch[1][0]
+        #print("replay_obs_array.shape: ", replay_obs_array.shape)
+        #print("replay_act_array.shape: ", replay_act_array.shape)
 
-        print("replay_obs_array.shape: ", replay_obs_array.shape)
-        print("replay_act_array.shape: ", replay_act_array.shape)
+        memory_state = np.zeros([1,1024], dtype=np.float32)
+        carry_state =  np.zeros([1,1024], dtype=np.float32)
 
         step_length = 1
         total_loss = 0
+
         for episode_index in range(0, episode_size, step_length):
             #print("replay_obs_array[episode_index:episode_index+step_length,:,:,:].shape: ", 
             #    replay_obs_array[episode_index:episode_index+step_length,:,:,:].shape)
@@ -351,18 +366,25 @@ def supervised_train(dataset, training_episode):
             
             #print("obs.shape: ", obs.shape)
             #print("act.shape: ", act.shape)
-            total_loss = supervised_replay(obs, act)
+            total_loss, next_memory_state, next_carry_state = supervised_replay(obs, act, memory_state, carry_state)
+            memory_state = next_memory_state
+            carry_state = next_carry_state
         
-            print("total_loss: ", total_loss)
-            print("")
-            
-        with writer.as_default():
-            #print("training_episode: ", training_episode)
-            tf.summary.scalar("actor_loss", actor_loss, step=training_episode)
-            writer.flush()
+            train_losses.append(total_loss)
 
-        if training_episode % 100 == 0:
-            model.save_weights(workspace_path + '/model/supervised_model_' + str(training_episode))
+            #print("total_loss: ", total_loss)
+            #print("")
+
+    mean_loss_train = np.mean(train_losses)
+    print("mean_loss_train: ", mean_loss_train)
+    print("")
+    with writer.as_default():
+        #print("training_episode: ", training_episode)
+        tf.summary.scalar("mean_loss_train", mean_loss_train, step=training_episode)
+        writer.flush()
+
+    if training_episode % 100 == 0:
+        model.save_weights(workspace_path + '/model/supervised_model_' + str(training_episode))
             
         
 for training_episode in range(0, 2000000):

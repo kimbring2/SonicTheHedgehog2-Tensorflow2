@@ -156,12 +156,15 @@ class InverseActionPolicy(tf.keras.Model):
     self.batch_normalization_2 = layers.BatchNormalization()
     self.conv2d_lstm_3 = layers.ConvLSTM2D(filters=64, kernel_size=(1, 1), padding="same", return_sequences=True, activation="relu")
     '''
-    self.conv3d_1 = layers.Conv3D(filters=64, kernel_size=(5, 5, 5), padding="same")
-    self.conv3d_2 = layers.Conv3D(filters=64, kernel_size=(3, 3, 3), padding="same")
-    self.conv3d_3 = layers.Conv3D(filters=64, kernel_size=(1, 1, 1), padding="same")
+    self.conv3d_1 = layers.Conv3D(filters=16, kernel_size=(5, 5, 5), padding="same")
+    self.conv3d_2 = layers.Conv3D(filters=16, kernel_size=(3, 3, 3), padding="same")
+    self.conv3d_3 = layers.Conv3D(filters=16, kernel_size=(1, 1, 1), padding="same")
 
-    self.common = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
+    self.lstm = layers.LSTM(1024, return_sequences=True, return_state=True, kernel_regularizer='l2')
+
+    self.common_1 = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
     self.layer_normalization = layers.LayerNormalization()
+    self.common_2 = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
 
     self.actor = layers.Dense(num_actions, kernel_regularizer='l2')
 
@@ -171,7 +174,7 @@ class InverseActionPolicy(tf.keras.Model):
 
     return config
     
-  def call(self, inputs: tf.Tensor, training) -> Tuple[tf.Tensor, tf.Tensor]:
+  def call(self, inputs: tf.Tensor, memory_state: tf.Tensor, carry_state: tf.Tensor, training) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
     # inputs.shape:  (1, 8, 64, 64, 3)
     batch_size = inputs.shape[0]
     time_step = inputs.shape[1]
@@ -196,11 +199,19 @@ class InverseActionPolicy(tf.keras.Model):
     conv3d_reshaped = tf.reshape(conv3d_3, [batch_size, time_step, -1])
     #print("conv3d_reshaped.shape: ", conv3d_reshaped.shape)
 
-    common = self.common(conv3d_reshaped)
-    #print("common.shape: ", common.shape)
+    common_1 = self.common_1(conv3d_reshaped)
+    #print("common_1.shape: ", common_1.shape)
 
-    pi_latent  = self.actor(common)
+    initial_state = (memory_state, carry_state)
+    lstm_output, final_memory_state, final_carry_state  = self.lstm(common_1, initial_state=initial_state, 
+                                                                    training=training)
 
+    #print("lstm_output.shape: ", lstm_output.shape)
+    common_2 = self.common_2(lstm_output)
+    #print("common_2.shape: ", common_2.shape)
+
+    #print("lstm_output.shape: ", lstm_output.shape)
+    pi_latent  = self.actor(common_2)
     #print("pi_latent.shape: ", pi_latent.shape)
     
-    return pi_latent
+    return pi_latent, final_memory_state, final_carry_state
