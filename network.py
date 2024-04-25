@@ -64,27 +64,27 @@ def log_normal_pdf(sample, mean, logvar, raxis=1):
 
 class ActorCritic(tf.keras.Model):
   """Combined actor-critic network."""
-  def __init__(
-      self, 
-      num_actions: int, 
-      num_hidden_units: int):
+  def __init__(self, num_actions: int, num_hidden_units: int, use_action_history: bool):
     """Initialize."""
     super().__init__()
 
     self.num_actions = num_actions
+    self.use_action_history = use_action_history
     
-    self.conv_1 = layers.Conv2D(32, 8, 4, padding="valid", activation="relu", kernel_regularizer='l2')
-    self.conv_2 = layers.Conv2D(32, 4, 2, padding="valid", activation="relu", kernel_regularizer='l2')
-    self.conv_3 = layers.Conv2D(64, 3, 1, padding="valid", activation="relu", kernel_regularizer='l2')
-    self.conv_4 = layers.Conv2D(512, 7, 1, padding="valid", activation="relu", kernel_regularizer='l2')
-    
-    #self.latent_dim = 60
-    #self.CVAE = CVAE(self.latent_dim)
-    #self.CVAE_encoder = layers.Dense(256, activation="relu", kernel_regularizer='l2')
+    latent_dim = int(512)
+    self.CVAE = CVAE(latent_dim)
 
-    self.lstm = layers.LSTM(256, return_sequences=True, return_state=True, kernel_regularizer='l2')
+    self.lstm_obs = layers.LSTM(256, return_sequences=True, return_state=True, kernel_regularizer='l2')
+
+    self.conv_1_his = layers.Conv2D(8, 4, 2, padding="valid", activation="relu", kernel_regularizer='l2')
+    self.conv_2_his = layers.Conv2D(16, 2, 1, padding="valid", activation="relu", kernel_regularizer='l2')
+    self.conv_3_his = layers.Conv2D(32, 3, 1, padding="valid", activation="relu", kernel_regularizer='l2')
+    self.lstm_his = layers.LSTM(256, return_sequences=True, return_state=True, kernel_regularizer='l2')
     
-    self.common = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
+    self.common_1 = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
+    self.common_2 = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
+    self.common_3 = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
+
     self.actor = layers.Dense(num_actions, kernel_regularizer='l2')
     self.critic = layers.Dense(1, kernel_regularizer='l2')
 
@@ -97,46 +97,49 @@ class ActorCritic(tf.keras.Model):
 
     return config
     
-  def call(self, obs: tf.Tensor, memory_state: tf.Tensor, carry_state: tf.Tensor, 
-           training) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
+  def call(self, obs: tf.Tensor, action_history: tf.Tensor, memory_state_obs: tf.Tensor, carry_state_obs: tf.Tensor, 
+           memory_state_his: tf.Tensor, carry_state_his: tf.Tensor, training) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
     batch_size = tf.shape(obs)[0]
 
-    print("obs.shape: ", obs.shape)
-    #pre_action = tf.expand_dims(pre_action, 0)
-    #tf.print("pre_action.shape: ", pre_action.shape)
+    mean, logvar = self.CVAE.encode(obs)
+    cvae_output = tf.concat((mean, logvar), axis=1)
+    cvae_output_reshaped = layers.Reshape((16,64))(cvae_output)
+    initial_state_obs = (memory_state_obs, carry_state_obs)
+    lstm_output_obs, memory_state_obs, carry_state_obs = self.lstm_obs(cvae_output_reshaped, initial_state=initial_state_obs, 
+                                                                       training=training)
 
-    #pre_action_tile = tf.ones(obs.shape, tf.float32) * (pre_action[0])
-    #tf.print("pre_action_tile.shape: ", pre_action_tile.shape)
+    conv_1_his = self.conv_1_his(action_history)
+    conv_2_his = self.conv_2_his(conv_1_his)
+    conv_3_his = self.conv_3_his(conv_2_his)
+    conv_3_his_reshaped = layers.Reshape((16,98))(conv_3_his)
 
-    #input_array = tf.concat([obs, pre_action_tile], 3)
+    initial_state_his = (memory_state_his, carry_state_his)
+    lstm_output_his, memory_state_his, carry_state_his = self.lstm_his(conv_3_his_reshaped, initial_state=initial_state_his, 
+                                                                       training=training)
 
-    conv_1 = self.conv_1(obs)
-    conv_2 = self.conv_2(conv_1)
-    conv_3 = self.conv_3(conv_2)
-    conv_4 = self.conv_4(conv_3)
+    X_input_obs = layers.Flatten()(lstm_output_obs)
+    X_input_obs = self.common_1(X_input_obs)
 
-    #mean, logvar = self.CVAE.encode(obs)
-    #cvae_output = tf.concat((mean, logvar), axis=1)
+    X_input_his = layers.Flatten()(lstm_output_his)
+    X_input_his = self.common_2(X_input_his)
 
-    #tf.print("cvae_output.shape 1: ", cvae_output.shape)
-    #tf.print("pre_action.shape: ", pre_action.shape)
-
-    #cvae_output = tf.concat((cvae_output, pre_action), axis=1)
-    #cvae_output_encoded = self.CVAE_encoder(cvae_output)
-
-    print("conv_4.shape: ", conv_4.shape)
+    if self.use_action_history:
+      X_input = tf.concat([X_input_obs, X_input_his], 1)
+    else:
+      X_input = X_input_obs
     
-    conv_4_reshaped = layers.Reshape((16, 32))(conv_4)
+    x = self.common_3(X_input)
 
-    initial_state = (memory_state, carry_state)
-    lstm_output, final_memory_state, final_carry_state  = self.lstm(conv_4_reshaped, initial_state=initial_state, training=training)
+    z = self.CVAE.reparameterize(mean, logvar)
+    x_logit = self.CVAE.decode(z)
+    cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=obs)
     
-    X_input = layers.Flatten()(lstm_output)
-    #tf.print("X_input.shape: ", X_input.shape)
-
-    x = self.common(X_input)
-
-    return self.actor(x), self.critic(x), final_memory_state, final_carry_state
+    logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
+    logpz = log_normal_pdf(z, 0., 0.)
+    logqz_x = log_normal_pdf(z, mean, logvar)
+    cvae_loss = logpx_z + logpz - logqz_x
+    
+    return self.actor(x), self.critic(x), memory_state_obs, carry_state_obs, memory_state_his, carry_state_his, cvae_loss
 
 
 
@@ -147,24 +150,23 @@ class InverseActionPolicy(tf.keras.Model):
     super().__init__()
 
     self.num_actions = num_actions
-    #self.input_shape =(1, 32, 84, 84, 3)
 
-    '''
-    self.conv2d_lstm_1 = layers.ConvLSTM2D(filters=64, kernel_size=(5, 5), padding="same", return_sequences=True, activation="relu")
-    self.batch_normalization_1 = layers.BatchNormalization()
-    self.conv2d_lstm_2 = layers.ConvLSTM2D(filters=64, kernel_size=(3, 3), padding="same", return_sequences=True, activation="relu")
-    self.batch_normalization_2 = layers.BatchNormalization()
-    self.conv2d_lstm_3 = layers.ConvLSTM2D(filters=64, kernel_size=(1, 1), padding="same", return_sequences=True, activation="relu")
-    '''
+    # obs
     self.conv3d_1 = layers.Conv3D(filters=16, kernel_size=(5, 5, 5), padding="same")
     self.conv3d_2 = layers.Conv3D(filters=16, kernel_size=(3, 3, 3), padding="same")
     self.conv3d_3 = layers.Conv3D(filters=16, kernel_size=(1, 1, 1), padding="same")
+    self.lstm_obs = layers.LSTM(512, return_sequences=True, return_state=True, kernel_regularizer='l2')
+    self.common_obs = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
 
-    self.lstm = layers.LSTM(1024, return_sequences=True, return_state=True, kernel_regularizer='l2')
+    # his
+    self.conv_1_his = layers.Conv2D(8, 4, 2, padding="valid", activation="relu", kernel_regularizer='l2')
+    self.conv_2_his = layers.Conv2D(16, 2, 1, padding="valid", activation="relu", kernel_regularizer='l2')
+    self.conv_3_his = layers.Conv2D(32, 3, 1, padding="valid", activation="relu", kernel_regularizer='l2')
+    self.lstm_his = layers.LSTM(128, return_sequences=True, return_state=True, kernel_regularizer='l2')
+    self.common_his = layers.Dense(num_hidden_units / 4, activation="relu", kernel_regularizer='l2')
 
-    self.common_1 = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
     self.layer_normalization = layers.LayerNormalization()
-    self.common_2 = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
+    self.common = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
 
     self.actor = layers.Dense(num_actions, kernel_regularizer='l2')
 
@@ -174,44 +176,57 @@ class InverseActionPolicy(tf.keras.Model):
 
     return config
     
-  def call(self, inputs: tf.Tensor, memory_state: tf.Tensor, carry_state: tf.Tensor, training) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
+  def call(self, observation: tf.Tensor, action_history: tf.Tensor, memory_state_obs: tf.Tensor, carry_state_obs: tf.Tensor, 
+           memory_state_his: tf.Tensor, carry_state_his: tf.Tensor, training) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
     # inputs.shape:  (1, 8, 64, 64, 3)
-    batch_size = inputs.shape[0]
-    time_step = inputs.shape[1]
+    print("observation.shape: ", observation.shape)
+    print("action_history.shape: ", action_history.shape)
 
-    #print("inputs.shape: ", inputs.shape)
+    batch_size = observation.shape[0]
+    time_step = observation.shape[1]
 
-    conv3d_1 = self.conv3d_1(inputs)
+    # obs
+    conv3d_1 = self.conv3d_1(observation)
     conv3d_1 = layers.LayerNormalization()(conv3d_1)
     conv3d_1 = layers.ReLU()(conv3d_1)
-    #print("conv3d_1.shape: ", conv3d_1.shape)
 
     conv3d_2 = self.conv3d_2(conv3d_1)
     conv3d_2 = layers.LayerNormalization()(conv3d_2)
     conv3d_2 = layers.ReLU()(conv3d_2)
-    #print("conv3d_2.shape: ", conv3d_2.shape)
 
     conv3d_3 = self.conv3d_3(conv3d_2)
     conv3d_3 = layers.LayerNormalization()(conv3d_3)
     conv3d_3 = layers.ReLU()(conv3d_3)
-    #print("conv3d_3.shape: ", conv3d_3.shape)
 
     conv3d_reshaped = tf.reshape(conv3d_3, [batch_size, time_step, -1])
-    #print("conv3d_reshaped.shape: ", conv3d_reshaped.shape)
 
-    common_1 = self.common_1(conv3d_reshaped)
-    #print("common_1.shape: ", common_1.shape)
+    initial_state_obs = (memory_state_obs, carry_state_obs)
+    lstm_output_obs, final_memory_state, final_carry_state  = self.lstm_obs(conv3d_reshaped, initial_state=initial_state_obs, 
+                                                                            training=training)
 
-    initial_state = (memory_state, carry_state)
-    lstm_output, final_memory_state, final_carry_state  = self.lstm(common_1, initial_state=initial_state, 
-                                                                    training=training)
+    X_input_obs = layers.Flatten()(conv3d_reshaped)
+    X_input_obs = self.common_obs(X_input_obs)
 
-    #print("lstm_output.shape: ", lstm_output.shape)
-    common_2 = self.common_2(lstm_output)
-    #print("common_2.shape: ", common_2.shape)
+    # act history
+    conv_1_his = self.conv_1_his(action_history)
+    conv_2_his = self.conv_2_his(conv_1_his)
+    conv_3_his = self.conv_3_his(conv_2_his)
+    conv_3_his_reshaped = layers.Reshape((16,98))(conv_3_his)
 
-    #print("lstm_output.shape: ", lstm_output.shape)
-    pi_latent  = self.actor(common_2)
-    #print("pi_latent.shape: ", pi_latent.shape)
+    initial_state_his = (memory_state_his, carry_state_his)
+    lstm_output_his, memory_state_his, carry_state_his = self.lstm_his(conv_3_his_reshaped, initial_state=initial_state_his, 
+                                                                       training=training)
+
+    X_input_his = layers.Flatten()(lstm_output_his)
+    X_input_his = self.common_his(X_input_his)
+
+    # common
+    print("X_input_obs.shape: ", X_input_obs.shape)
+    print("X_input_his.shape: ", X_input_his.shape)
+    print("")
+
+    X_input = tf.concat([X_input_obs, X_input_his], 1)
+
+    pi_latent  = self.actor(X_input)
     
     return pi_latent, final_memory_state, final_carry_state

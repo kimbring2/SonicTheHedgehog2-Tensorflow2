@@ -192,7 +192,7 @@ num_hidden_units = 2048
 
 model = network.InverseActionPolicy(num_actions, num_hidden_units)
 
-model_name = 'inverse_dynamic_model_60'
+model_name = 'inverse_dynamic_model_7200'
 model.load_weights("model/" + model_name)
  
 
@@ -232,7 +232,7 @@ while True:
 
         obs_history = np.roll(obs_history, 1, axis=0)
         obs_history[0,:,:,:] = obs
-        
+
         action_history = np.roll(action_history, 1, axis=0)
         action_history[0] = action_index
         

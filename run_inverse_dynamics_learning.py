@@ -195,7 +195,7 @@ def one_hot(a, num_classes):
   return np.squeeze(np.eye(num_classes)[a])
 
 
-time_step = 128
+time_step = 16
 
 class TrajetoryDataset(tf.data.Dataset):
   def _generator(num_trajectorys):
@@ -213,10 +213,12 @@ class TrajetoryDataset(tf.data.Dataset):
         obs = cv2.resize(obs, dsize=(64,64), interpolation=cv2.INTER_AREA) / 255.0
 
         action_index = 0
+        pre_action_index = action_index
 
-        action_history_list, obs_history_list = [], []
         obs_history = np.zeros((time_step, 64, 64, 3))
-        action_history = np.zeros((time_step, len(possible_action_list)))
+        action_history = np.zeros((time_step, 12, len(possible_action_list)))
+
+        action = np.zeros((12, len(possible_action_list)))
 
         step_num = 0
 
@@ -225,15 +227,15 @@ class TrajetoryDataset(tf.data.Dataset):
             #env.render()
             #print("step_num: ", step_num)
 
-            obs_history_list.append(obs_history)
-            action_history_list.append(action_history)
+            #obs_history_list.append(obs_history)
+            #action_history_list.append(action_history)
 
-            obs_history = np.roll(obs_history, 1, axis=0)
-            obs_history[0,:,:,:] = obs
+            #obs_history = np.roll(obs_history, 1, axis=0)
+            #obs_history[0,:,:,:] = obs
 
-            action_onehot = one_hot(action_index, len(possible_action_list))
-            action_history = np.roll(action_history, 1, axis=0)
-            action_history[0,:] = action_onehot
+            #action_onehot = one_hot(action_index, len(possible_action_list))
+            #action_history = np.roll(action_history, 1, axis=0)
+            #action_history[0,:] = action_onehot
             
             keys = []
             for i in range(len(env.buttons)):
@@ -243,15 +245,29 @@ class TrajetoryDataset(tf.data.Dataset):
             converted_action = action_conversion_table[str(keys)]
             action_index = possible_action_list.index(converted_action)
 
+            pre_action_index = action_index
+            action_index = possible_action_list.index(converted_action)
+
             next_obs, rew, done, info = env.step(converted_action)
             next_obs = cv2.resize(next_obs, dsize=(64, 64), interpolation=cv2.INTER_AREA) / 255.0
+
+            ########################################################################################
+            obs_history = np.roll(obs_history, 1, axis=0)
+            obs_history[0,:,:,:] = obs
+
+            action_history = np.roll(action_history, 1, axis=0)
+            action_history[0,:] = action
+
+            pre_action_onehot = one_hot(pre_action_index, num_actions)
+            action = np.roll(action, 1, axis=0)
+            action[0,:] = pre_action_onehot
+            ########################################################################################
 
             obs = next_obs
             saved_state = env.em.get_state()
             
-            if len(obs_history_list) == time_step:
-                yield (obs_history_list, action_history_list)
-                action_history_list, obs_history_list = [], []
+            if step_num % 8 == 0:
+                yield (obs_history, action_history)
                 #obs_history = np.zeros((8, 64, 64, 3))
                 #action_history = np.zeros((8, len(possible_action_list)))
             
@@ -269,7 +285,7 @@ dataset = tf.data.Dataset.range(1).interleave(TrajetoryDataset,
 
 
 num_actions = len(possible_action_list)
-num_hidden_units = 2048
+num_hidden_units = 1024
 
 model = network.InverseActionPolicy(num_actions, num_hidden_units)
 #model = tf.keras.models.load_model('MineRL_SL_Model')
@@ -285,23 +301,29 @@ optimizer = tf.keras.optimizers.Adam(0.0001)
 
 
 #@tf.function
-def supervised_replay(replay_obs_list, replay_act_list, memory_state, carry_state):
+def supervised_replay(replay_obs_list, replay_act_list, memory_state_obs, carry_state_obs, memory_state_his, carry_state_his):
     replay_obs_array = tf.concat(replay_obs_list, 0)
     replay_act_array = tf.concat(replay_act_list, 0)
 
-    memory_state = tf.concat(memory_state, 0)
-    carry_state = tf.concat(carry_state, 0)
+    memory_state_obs = tf.concat(memory_state_obs, 0)
+    carry_state_obs = tf.concat(carry_state_obs, 0)
+    memory_state_his = tf.concat(memory_state_his, 0)
+    carry_state_his = tf.concat(carry_state_his, 0)
 
     batch_size = replay_obs_array.shape[0]
     
     with tf.GradientTape() as tape:
         act_probs = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
         for i in tf.range(0, batch_size):
-            prediction = model(tf.expand_dims(replay_obs_array[i,:,:,:,:], 0), memory_state, carry_state, training=True)
+            prediction = model(tf.expand_dims(replay_obs_array[i,:,:,:,:], 0), 
+                               tf.expand_dims(replay_act_array[i,:,:,:], 0),
+                               memory_state_obs, carry_state_obs, memory_state_his, carry_state_his, training=True)
             #print("prediction.shape: ", prediction.shape)
             act_pi = prediction[0][0]
-            memory_state = prediction[1]
-            carry_state = prediction[2]
+            memory_state_obs = prediction[2]
+            carry_state_obs = prediction[3]
+            memory_state_his = prediction[4]
+            carry_state_his = prediction[5]
         
             act_probs = act_probs.write(i, act_pi)
 
@@ -332,19 +354,22 @@ def supervised_train(dataset):
         episode_size = batch[0].shape[1]
         #print("episode_size: ", episode_size)
 
-        replay_obs_array = batch[0][0]
-        replay_act_array = batch[1][0]
+        replay_obs_array = batch[0]
+        replay_act_array = batch[1]
+
         #print("replay_obs_array.shape: ", replay_obs_array.shape)
         #print("replay_act_array.shape: ", replay_act_array.shape)
 
-        memory_state = np.zeros([1,1024], dtype=np.float32)
-        carry_state =  np.zeros([1,1024], dtype=np.float32)
+        memory_state_obs = np.zeros([1,512], dtype=np.float32)
+        carry_state_obs =  np.zeros([1,512], dtype=np.float32)
+        memory_state_his = np.zeros([1,128], dtype=np.float32)
+        carry_state_his =  np.zeros([1,128], dtype=np.float32)
 
         step_length = 1
         train_losses = []
         for episode_index in range(0, episode_size, step_length):
             obs = replay_obs_array[episode_index:episode_index+step_length,:,:,:]
-            act = replay_act_array[episode_index:episode_index+step_length,:]
+            act = replay_act_array[episode_index:episode_index+step_length,:,:]
             
             #print("episode_index: ", episode_index)
             if len(obs) != step_length:
@@ -352,9 +377,11 @@ def supervised_train(dataset):
             
             #print("obs.shape: ", obs.shape)
             #print("act.shape: ", act.shape)
-            total_loss, next_memory_state, next_carry_state = supervised_replay(obs, act, memory_state, carry_state)
-            memory_state = next_memory_state
-            carry_state = next_carry_state
+            total_loss, memory_state_obs, carry_state_obs, memory_state_his, carry_state_his = supervised_replay(obs, act, 
+                                                                                                                 memory_state_obs, 
+                                                                                                                 carry_state_obs, 
+                                                                                                                 memory_state_his, 
+                                                                                                                 carry_state_his)
         
             train_losses.append(total_loss)
             #print("total_loss: ", total_loss)
@@ -367,7 +394,7 @@ def supervised_train(dataset):
             tf.summary.scalar("mean_loss_train", mean_loss_train, step=training_episode)
             writer.flush()
 
-        if training_episode % 10 == 0:
+        if training_episode % 100 == 0:
             model.save_weights(workspace_path + '/model/inverse_dynamic_model_' + str(training_episode))
 
         training_episode += 1
