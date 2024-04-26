@@ -152,20 +152,19 @@ class InverseActionPolicy(tf.keras.Model):
     self.num_actions = num_actions
 
     # obs
-    self.conv3d_1 = layers.Conv3D(filters=16, kernel_size=(5, 5, 5), padding="same")
-    self.conv3d_2 = layers.Conv3D(filters=16, kernel_size=(3, 3, 3), padding="same")
-    self.conv3d_3 = layers.Conv3D(filters=16, kernel_size=(1, 1, 1), padding="same")
+    self.conv3d_1_obs = layers.Conv3D(filters=32, kernel_size=(5, 5, 5), padding="same")
+    self.conv3d_2_obs = layers.Conv3D(filters=32, kernel_size=(3, 3, 3), padding="same")
+    self.conv3d_3_obs = layers.Conv3D(filters=32, kernel_size=(1, 1, 1), padding="same")
     self.lstm_obs = layers.LSTM(512, return_sequences=True, return_state=True, kernel_regularizer='l2')
     self.common_obs = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
 
     # his
-    self.conv_1_his = layers.Conv2D(8, 4, 2, padding="valid", activation="relu", kernel_regularizer='l2')
-    self.conv_2_his = layers.Conv2D(16, 2, 1, padding="valid", activation="relu", kernel_regularizer='l2')
-    self.conv_3_his = layers.Conv2D(32, 3, 1, padding="valid", activation="relu", kernel_regularizer='l2')
+    self.conv3d_1_his = layers.Conv3D(filters=16, kernel_size=(5, 5, 5), padding="same")
+    self.conv3d_2_his = layers.Conv3D(filters=16, kernel_size=(3, 3, 3), padding="same")
+    self.conv3d_3_his = layers.Conv3D(filters=16, kernel_size=(1, 1, 1), padding="same")
     self.lstm_his = layers.LSTM(128, return_sequences=True, return_state=True, kernel_regularizer='l2')
     self.common_his = layers.Dense(num_hidden_units / 4, activation="relu", kernel_regularizer='l2')
 
-    self.layer_normalization = layers.LayerNormalization()
     self.common = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
 
     self.actor = layers.Dense(num_actions, kernel_regularizer='l2')
@@ -179,73 +178,78 @@ class InverseActionPolicy(tf.keras.Model):
   def call(self, observation: tf.Tensor, action_history: tf.Tensor, memory_state_obs: tf.Tensor, carry_state_obs: tf.Tensor, 
            memory_state_his: tf.Tensor, carry_state_his: tf.Tensor, training) -> Tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
     # inputs.shape:  (1, 8, 64, 64, 3)
-    print("observation.shape: ", observation.shape)
-    print("action_history.shape: ", action_history.shape)
+    #print("observation.shape: ", observation.shape)
+
+    action_history = tf.expand_dims(action_history, 4)
+    #print("action_history.shape: ", action_history.shape)
 
     observation = tf.cast(observation, tf.float32)
-    action_history = tf.cast(action_history, tf.float32)
+    #action_history = tf.cast(action_history, tf.float32)
 
     batch_size = observation.shape[0]
     time_step = observation.shape[1]
 
     # obs
-    conv3d_1 = self.conv3d_1(observation)
-    conv3d_1 = layers.LayerNormalization()(conv3d_1)
-    conv3d_1 = layers.ReLU()(conv3d_1)
+    conv3d_1_obs = self.conv3d_1_obs(observation)
+    conv3d_1_obs = layers.LayerNormalization()(conv3d_1_obs)
+    conv3d_1_obs = layers.ReLU()(conv3d_1_obs)
 
-    conv3d_2 = self.conv3d_2(conv3d_1)
-    conv3d_2 = layers.LayerNormalization()(conv3d_2)
-    conv3d_2 = layers.ReLU()(conv3d_2)
+    conv3d_2_obs = self.conv3d_2_obs(conv3d_1_obs)
+    conv3d_2_obs = layers.LayerNormalization()(conv3d_2_obs)
+    conv3d_2_obs = layers.ReLU()(conv3d_2_obs)
 
-    conv3d_3 = self.conv3d_3(conv3d_2)
-    conv3d_3 = layers.LayerNormalization()(conv3d_3)
-    conv3d_3 = layers.ReLU()(conv3d_3)
+    conv3d_3_obs = self.conv3d_3_obs(conv3d_2_obs)
+    conv3d_3_obs = layers.LayerNormalization()(conv3d_3_obs)
 
-    conv3d_reshaped = tf.reshape(conv3d_3, [batch_size, time_step, -1])
-    #print("conv3d_reshaped.shape: ", conv3d_reshaped.shape)
+    conv3d_3_obs = layers.BatchNormalization()(conv3d_3_obs)
+    conv3d_3_obs = layers.ReLU()(conv3d_3_obs)
+
+    conv3d_obs_reshaped = tf.reshape(conv3d_3_obs, [batch_size, time_step, -1])
+    #print("conv3d_obs_reshaped: ", conv3d_obs_reshaped)
 
     initial_state_obs = (memory_state_obs, carry_state_obs)
-    lstm_output_obs, final_memory_state, final_carry_state  = self.lstm_obs(conv3d_reshaped, initial_state=initial_state_obs, 
+    lstm_output_obs, final_memory_state, final_carry_state  = self.lstm_obs(conv3d_obs_reshaped, initial_state=initial_state_obs, 
                                                                             training=training)
 
-    #print("lstm_output_obs.shape: ", lstm_output_obs.shape)
-    #X_input_obs = layers.Flatten()(lstm_output_obs)
     X_input_obs = self.common_obs(lstm_output_obs)
-    #print("X_input_obs.shape: ", X_input_obs.shape)
 
     # act history
-    conv_1_his = self.conv_1_his(action_history)
-    conv_2_his = self.conv_2_his(conv_1_his)
-    conv_3_his = self.conv_3_his(conv_2_his)
-    #print("conv_3_his.shape: ", conv_3_his.shape)
-    conv_3_his_reshaped = layers.Reshape((28,64))(conv_3_his)
-    #print("conv_3_his_reshaped.shape: ", conv_3_his_reshaped.shape)
+    conv3d_1_his = self.conv3d_1_his(action_history)
+    conv3d_1_his = layers.LayerNormalization()(conv3d_1_his)
+    conv3d_1_his = layers.ReLU()(conv3d_1_his)
+
+    conv3d_2_his = self.conv3d_2_his(conv3d_1_his)
+    conv3d_2_his = layers.LayerNormalization()(conv3d_2_his)
+    conv3d_2_his = layers.ReLU()(conv3d_2_his)
+
+    conv3d_3_his = self.conv3d_3_his(conv3d_2_his)
+    conv3d_3_his = layers.LayerNormalization()(conv3d_3_his)
+
+    conv3d_3_his = layers.BatchNormalization()(conv3d_3_his)
+    conv3d_3_his = layers.ReLU()(conv3d_3_his)
+
+    conv3d_his_reshaped = tf.reshape(conv3d_3_his, [batch_size, time_step, -1])
+    #print("conv3d_his_reshaped.shape: ", conv3d_his_reshaped.shape)
 
     initial_state_his = (memory_state_his, carry_state_his)
-    lstm_output_his, memory_state_his, carry_state_his = self.lstm_his(conv_3_his_reshaped, initial_state=initial_state_his, 
+    lstm_output_his, memory_state_his, carry_state_his = self.lstm_his(conv3d_his_reshaped, initial_state=initial_state_his, 
                                                                        training=training)
 
     #print("lstm_output_his.shape: ", lstm_output_his.shape)
-    X_input_his = layers.Flatten()(lstm_output_his)
-    X_input_his = self.common_his(X_input_his)
+    X_input_his = self.common_his(lstm_output_his)
 
-    # common
     #print("X_input_obs.shape: ", X_input_obs.shape)
     #print("X_input_his.shape: ", X_input_his.shape)
 
-    b = tf.constant([64,1], tf.int32)
-    X_input_his_tiled = tf.tile(X_input_his, b)
-    X_input_his_tiled = tf.expand_dims(X_input_his_tiled, 0)
-    #print("X_input_his_tiled.shape: ", X_input_his_tiled.shape)
-
-    X_input = tf.concat([X_input_obs, X_input_his_tiled], 2)
+    X_input = tf.concat([X_input_obs, X_input_his], 2)
+    #X_input = X_input_obs
     #print("X_input.shape: ", X_input.shape)
-    X_input = X_input_obs
 
     X_input = self.common(X_input)
 
+    #print("X_input: ", X_input)
     pi_latent  = self.actor(X_input)
     #print("pi_latent.shape: ", pi_latent.shape)
     #print("")
-    
+
     return pi_latent, memory_state_obs, carry_state_obs, memory_state_his, carry_state_his
