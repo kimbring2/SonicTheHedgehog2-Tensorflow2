@@ -182,6 +182,9 @@ class InverseActionPolicy(tf.keras.Model):
     print("observation.shape: ", observation.shape)
     print("action_history.shape: ", action_history.shape)
 
+    observation = tf.cast(observation, tf.float32)
+    action_history = tf.cast(action_history, tf.float32)
+
     batch_size = observation.shape[0]
     time_step = observation.shape[1]
 
@@ -199,34 +202,50 @@ class InverseActionPolicy(tf.keras.Model):
     conv3d_3 = layers.ReLU()(conv3d_3)
 
     conv3d_reshaped = tf.reshape(conv3d_3, [batch_size, time_step, -1])
+    #print("conv3d_reshaped.shape: ", conv3d_reshaped.shape)
 
     initial_state_obs = (memory_state_obs, carry_state_obs)
     lstm_output_obs, final_memory_state, final_carry_state  = self.lstm_obs(conv3d_reshaped, initial_state=initial_state_obs, 
                                                                             training=training)
 
-    X_input_obs = layers.Flatten()(conv3d_reshaped)
-    X_input_obs = self.common_obs(X_input_obs)
+    #print("lstm_output_obs.shape: ", lstm_output_obs.shape)
+    #X_input_obs = layers.Flatten()(lstm_output_obs)
+    X_input_obs = self.common_obs(lstm_output_obs)
+    #print("X_input_obs.shape: ", X_input_obs.shape)
 
     # act history
     conv_1_his = self.conv_1_his(action_history)
     conv_2_his = self.conv_2_his(conv_1_his)
     conv_3_his = self.conv_3_his(conv_2_his)
-    conv_3_his_reshaped = layers.Reshape((16,98))(conv_3_his)
+    #print("conv_3_his.shape: ", conv_3_his.shape)
+    conv_3_his_reshaped = layers.Reshape((28,64))(conv_3_his)
+    #print("conv_3_his_reshaped.shape: ", conv_3_his_reshaped.shape)
 
     initial_state_his = (memory_state_his, carry_state_his)
     lstm_output_his, memory_state_his, carry_state_his = self.lstm_his(conv_3_his_reshaped, initial_state=initial_state_his, 
                                                                        training=training)
 
+    #print("lstm_output_his.shape: ", lstm_output_his.shape)
     X_input_his = layers.Flatten()(lstm_output_his)
     X_input_his = self.common_his(X_input_his)
 
     # common
-    print("X_input_obs.shape: ", X_input_obs.shape)
-    print("X_input_his.shape: ", X_input_his.shape)
-    print("")
+    #print("X_input_obs.shape: ", X_input_obs.shape)
+    #print("X_input_his.shape: ", X_input_his.shape)
 
-    X_input = tf.concat([X_input_obs, X_input_his], 1)
+    b = tf.constant([64,1], tf.int32)
+    X_input_his_tiled = tf.tile(X_input_his, b)
+    X_input_his_tiled = tf.expand_dims(X_input_his_tiled, 0)
+    #print("X_input_his_tiled.shape: ", X_input_his_tiled.shape)
+
+    X_input = tf.concat([X_input_obs, X_input_his_tiled], 2)
+    #print("X_input.shape: ", X_input.shape)
+    X_input = X_input_obs
+
+    X_input = self.common(X_input)
 
     pi_latent  = self.actor(X_input)
+    #print("pi_latent.shape: ", pi_latent.shape)
+    #print("")
     
-    return pi_latent, final_memory_state, final_carry_state
+    return pi_latent, memory_state_obs, carry_state_obs, memory_state_his, carry_state_his
