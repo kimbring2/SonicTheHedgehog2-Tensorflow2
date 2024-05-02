@@ -227,6 +227,7 @@ class TrajetoryDataset(tf.data.Dataset):
 
         print('stepping replay')
 
+
         action_history = np.zeros((23, num_actions))
 
         while replay.step():

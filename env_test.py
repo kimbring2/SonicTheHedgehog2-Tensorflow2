@@ -85,7 +85,8 @@ action_dict = {
                 '[0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]': 64,
                 '[1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]': 65,
                 '[0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0]': 66,
-                '[0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]': 67
+                '[0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]': 67,
+                '[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]': 68
 
               }
 action_list = [
@@ -156,7 +157,8 @@ action_list = [
                 [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
                 [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
                 [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]
+                [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
               ]
 
 action_conversion_table = {
@@ -240,6 +242,8 @@ action_conversion_table = {
                 '[1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
                 '[0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0]' : [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], # = ['B', 'RIGHT']
                 '[0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0], # = ['DOWN', RIGHT']
+
+                '[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['']
               }
 
 
@@ -302,10 +306,13 @@ stage_name_list = ['EmeraldHillZone', 'ChemicalPlantZone', 'AquaticRuinZone', 'C
 
 test = True
 if test:
+    print("test")
     env = retro.make(game='SonicTheHedgehog2-Genesis', state=retro.State.NONE, use_restricted_actions=retro.Actions.ALL)
     replay_path = arguments.replay_path
 
     replay_file_path_list = glob.glob(replay_path + '/*.bk2')
+
+    #replay_file_path_list = []
 
     break_flag = True
     for replay_name in replay_file_path_list:
@@ -360,15 +367,17 @@ if test:
             #frame_rgb[frame_rgb < 100] = 0
             #frame_rgb[frame_rgb >= 100] = 255
 
-            frame_rgb1 = cv2.resize(obs, dsize=(512, 512), interpolation=cv2.INTER_AREA)
-            frame_rgb1 = cv2.cvtColor(frame_rgb1, cv2.COLOR_BGR2RGB)
+            #obs.shape:  (224, 320, 3)
+            #frame_rgb1 = cv2.resize(obs, dsize=(84, 84), interpolation=cv2.INTER_AREA)
+            #frame_rgb1 = obs
+            frame_rgb1 = cv2.cvtColor(obs, cv2.COLOR_BGR2RGB)
 
-            frame_rgb2 = cv2.cvtColor(obs, cv2.COLOR_BGR2RGB)
-            frame_rgb2 = cv2.resize(frame_rgb2, dsize=(512, 512), interpolation=cv2.INTER_AREA)
+            #frame_rgb2 = cv2.cvtColor(obs, cv2.COLOR_BGR2RGB)
+            #frame_rgb2 = cv2.resize(frame_rgb2, dsize=(512, 512), interpolation=cv2.INTER_AREA)
             #print("frame_rgb.shape: ", frame_rgb.shape)
-            cv2.imshow("frame_rgb1", frame_rgb1)
-            cv2.imshow("frame_rgb2", frame_rgb2)
-            cv2.waitKey(1)
+            #cv2.imshow("frame_rgb1", frame_rgb1)
+            #cv2.imshow("frame_rgb2", frame_rgb2)
+            #cv2.waitKey(1)
 
             #env.render()
 
@@ -477,7 +486,7 @@ class SonicDiscretizer(gym.ActionWrapper):
 
         return self._actions[a].copy()
 
-
+'''
 def main():
     env = retro.make(game='SonicTheHedgehog2-Genesis', scenario='contest', state='EmeraldHillZone.Act1')
     env = SonicDiscretizer(env)
@@ -508,3 +517,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+'''

@@ -152,18 +152,20 @@ class InverseActionPolicy(tf.keras.Model):
     self.num_actions = num_actions
 
     # obs
-    self.conv3d_1_obs = layers.Conv3D(filters=32, kernel_size=(5, 5, 5), padding="same")
-    self.conv3d_2_obs = layers.Conv3D(filters=32, kernel_size=(3, 3, 3), padding="same")
-    self.conv3d_3_obs = layers.Conv3D(filters=32, kernel_size=(1, 1, 1), padding="same")
+    self.conv3d_1_obs = layers.Conv3D(filters=12, kernel_size=(5, 5, 5), padding="same")
+    self.conv3d_2_obs = layers.Conv3D(filters=24, kernel_size=(3, 3, 3), padding="same")
+    self.conv3d_3_obs = layers.Conv3D(filters=48, kernel_size=(1, 1, 1), padding="same")
     self.lstm_obs = layers.LSTM(512, return_sequences=True, return_state=True, kernel_regularizer='l2')
-    self.common_obs = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
+    self.common_obs_1 = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
+    self.common_obs_2 = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
 
     # his
-    self.conv3d_1_his = layers.Conv3D(filters=16, kernel_size=(5, 5, 5), padding="same")
-    self.conv3d_2_his = layers.Conv3D(filters=16, kernel_size=(3, 3, 3), padding="same")
-    self.conv3d_3_his = layers.Conv3D(filters=16, kernel_size=(1, 1, 1), padding="same")
+    self.conv3d_1_his = layers.Conv3D(filters=12, kernel_size=(5, 5, 5), padding="same")
+    self.conv3d_2_his = layers.Conv3D(filters=24, kernel_size=(3, 3, 3), padding="same")
+    self.conv3d_3_his = layers.Conv3D(filters=48, kernel_size=(1, 1, 1), padding="same")
     self.lstm_his = layers.LSTM(128, return_sequences=True, return_state=True, kernel_regularizer='l2')
-    self.common_his = layers.Dense(num_hidden_units / 4, activation="relu", kernel_regularizer='l2')
+    self.common_his_1 = layers.Dense(num_hidden_units / 4, activation="relu", kernel_regularizer='l2')
+    self.common_his_2 = layers.Dense(num_hidden_units / 4, activation="relu", kernel_regularizer='l2')
 
     self.common = layers.Dense(num_hidden_units, activation="relu", kernel_regularizer='l2')
 
@@ -204,14 +206,19 @@ class InverseActionPolicy(tf.keras.Model):
     conv3d_3_obs = layers.BatchNormalization()(conv3d_3_obs)
     conv3d_3_obs = layers.ReLU()(conv3d_3_obs)
 
+    #print("conv3d_3_obs.shape: ", conv3d_3_obs.shape)
+
     conv3d_obs_reshaped = tf.reshape(conv3d_3_obs, [batch_size, time_step, -1])
-    #print("conv3d_obs_reshaped: ", conv3d_obs_reshaped)
+    #print("conv3d_obs_reshaped.shape 1: ", conv3d_obs_reshaped.shape)
+
+    conv3d_obs_reshaped = self.common_obs_1(conv3d_obs_reshaped)
+    #print("conv3d_obs_reshaped.shape 2: ", conv3d_obs_reshaped.shape)
 
     initial_state_obs = (memory_state_obs, carry_state_obs)
     lstm_output_obs, final_memory_state, final_carry_state  = self.lstm_obs(conv3d_obs_reshaped, initial_state=initial_state_obs, 
                                                                             training=training)
 
-    X_input_obs = self.common_obs(lstm_output_obs)
+    X_input_obs = self.common_obs_2(lstm_output_obs)
 
     # act history
     conv3d_1_his = self.conv3d_1_his(action_history)
@@ -229,14 +236,17 @@ class InverseActionPolicy(tf.keras.Model):
     conv3d_3_his = layers.ReLU()(conv3d_3_his)
 
     conv3d_his_reshaped = tf.reshape(conv3d_3_his, [batch_size, time_step, -1])
-    #print("conv3d_his_reshaped.shape: ", conv3d_his_reshaped.shape)
+    #print("conv3d_his_reshaped.shape 1: ", conv3d_his_reshaped.shape)
+
+    conv3d_his_reshaped = self.common_his_1(conv3d_his_reshaped)
+    #print("conv3d_his_reshaped.shape 2: ", conv3d_his_reshaped.shape)
 
     initial_state_his = (memory_state_his, carry_state_his)
     lstm_output_his, memory_state_his, carry_state_his = self.lstm_his(conv3d_his_reshaped, initial_state=initial_state_his, 
                                                                        training=training)
 
     #print("lstm_output_his.shape: ", lstm_output_his.shape)
-    X_input_his = self.common_his(lstm_output_his)
+    X_input_his = self.common_his_2(lstm_output_his)
 
     #print("X_input_obs.shape: ", X_input_obs.shape)
     #print("X_input_his.shape: ", X_input_his.shape)
