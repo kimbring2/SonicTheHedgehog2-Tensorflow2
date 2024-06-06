@@ -39,7 +39,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 workspace_path = arguments.workspace_path
 #replay_path = arguments.replay_path
 workspace_path = '/media/kimbring2/be356a87-def6-4be8-bad2-077951f0f3da/Sonic-the-Hedgehog-A3C-LSTM-tensorflow2'
-replay_path = '/media/kimbring2/be356a87-def6-4be8-bad2-077951f0f3da/retro-movies/human/SonicTheHedgehog2-Genesis/contest/SonicTheHedgehog2-Genesis-EmeraldHillZone.Act1'
+replay_path = '/media/kimbring2/be356a87-def6-4be8-bad2-077951f0f3da/retro-movies/human/SonicTheHedgehog2-Genesis/contest/SonicTheHedgehog2-Genesis-ChemicalPlantZone.Act1'
 
 writer = tf.summary.create_file_writer(workspace_path + "/tensorboard")
 
@@ -192,7 +192,7 @@ def one_hot(a, num_classes):
   return np.squeeze(np.eye(num_classes)[a])
 
 
-time_step = 32
+time_step = 64
 
 class TrajetoryDataset(tf.data.Dataset):
   def _generator(num_trajectorys):
@@ -279,7 +279,8 @@ num_actions = len(possible_action_list)
 num_hidden_units = 1024
 
 model = network.InverseActionPolicy(num_actions, num_hidden_units)
-#model = tf.keras.models.load_model('MineRL_SL_Model')
+model_name = 'inverse_dynamic_model_20'
+#model.load_weights("model/" + model_name)
 
 if arguments.pretrained_model != None:
     print("Load Pretrained Model")
@@ -291,8 +292,7 @@ cce_loss_logits = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
 optimizer = tf.keras.optimizers.Adam(0.00001)
 
 
-def supervised_replay(obs_list, act_list, act_history_list, raw_act_list, memory_state_obs, carry_state_obs, 
-                      memory_state_his, carry_state_his):
+def supervised_replay(obs_list, act_list, act_history_list, raw_act_list, memory_state_obs, carry_state_obs, memory_state_his, carry_state_his):
     memory_state_obs = tf.concat(memory_state_obs, 0)
     carry_state_obs = tf.concat(carry_state_obs, 0)
     memory_state_his = tf.concat(memory_state_his, 0)
@@ -318,13 +318,13 @@ def supervised_replay(obs_list, act_list, act_history_list, raw_act_list, memory
         action_dist = tfd.Categorical(logits=act_pi)
         action_indexs = action_dist.sample()
 
-        print("raw_act_list: ", raw_act_list)
+        #print("raw_act_list: ", raw_act_list)
         #print("act_list: ", act_list)
-        print("action_indexs: ", action_indexs)
+        #print("action_indexs: ", action_indexs)
 
         act_loss = cce_loss_logits(act_list[0], act_pi[0])
-        print("act_loss: ", act_loss)
-        print("")
+        #print("act_loss: ", act_loss)
+        #print("")
 
         regularization_loss = tf.reduce_sum(model.losses)
 

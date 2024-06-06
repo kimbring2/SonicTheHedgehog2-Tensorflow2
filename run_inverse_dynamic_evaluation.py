@@ -197,15 +197,15 @@ num_actions = len(possible_action_list)
 num_hidden_units = 1024
 
 model = network.InverseActionPolicy(num_actions, num_hidden_units)
-model_name = 'inverse_dynamic_model_60'
-#model.load_weights("model/" + model_name)
+model_name = 'inverse_dynamic_model_90'
+model.load_weights("model/" + model_name)
 
 
 def one_hot(a, num_classes):
   return np.squeeze(np.eye(num_classes)[a])
 
 
-time_step = 32
+time_step = 64
 
 while True:
     replay_file_path_list = glob.glob(replay_path + '/*.bk2')
