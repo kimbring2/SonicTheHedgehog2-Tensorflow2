@@ -75,6 +75,7 @@ action_conversion_table = {
                 '[1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], # = ['B', 'LEFT']
                 '[1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]' : [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0], # = ['B', 'LEFT', 'DOWN']
                 '[0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0], # = ['DOWN', 'LEFT', 'RIGHT']
+                '[0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0], # = ['DOWN', 'LEFT', 'RIGHT']
                 '[1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]' : [0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0], # = ['A', 'LEFT', 'RIGHT']
                 '[1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0]' : [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # = ['B']
 
@@ -126,7 +127,7 @@ action_conversion_table = {
                 '[0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0]' : [0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0], # = ['DOWN', RIGHT']
 
                 '[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]' : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # = ['']
-              }
+                }
 
 # ['']:                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 # ['LEFT']:                  [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
@@ -191,14 +192,16 @@ env = retro.make(game='SonicTheHedgehog2-Genesis', state=retro.State.NONE, use_r
 def one_hot(a, num_classes):
   return np.squeeze(np.eye(num_classes)[a])
 
-
 time_step = 64
 
 class TrajetoryDataset(tf.data.Dataset):
   def _generator(num_trajectorys):
-    while True:
-        replay_file_path_list = glob.glob(replay_path + '/*.bk2')
-        replay_name = random.choice(replay_file_path_list)
+    replay_file_path_list = glob.glob(replay_path + '/*.bk2')
+
+    #while True:
+    for replay_name in replay_file_path_list:
+        #replay_file_path_list = glob.glob(replay_path + '/*.bk2')
+        #replay_name = random.choice(replay_file_path_list)
         replay_name = replay_name.split('/')[-1]
 
         replay = retro.Movie(os.path.join(replay_path, replay_name))
@@ -220,6 +223,9 @@ class TrajetoryDataset(tf.data.Dataset):
         step_num = 0
 
         print('stepping replay')
+
+        offset_step = random.randint(0, 64)
+
         while replay.step():
             #env.render()
             #print("step_num: ", step_num)
@@ -239,16 +245,24 @@ class TrajetoryDataset(tf.data.Dataset):
             next_obs = next_obs / 255.0
 
             ########################################################################################
-            obs_history_list.append(obs)
+            if offset_step == 0:
+                obs_history_list.append(obs)
 
-            raw_action_list.append(action_index)
-            action_onehot = one_hot(action_index, num_actions)
-            action_list.append(action_onehot)
+                raw_action_list.append(action_index)
+                action_onehot = one_hot(action_index, num_actions)
+                action_list.append(action_onehot)
 
-            pre_action_onehot = one_hot(pre_action_index, num_actions)
-            action_history = np.roll(action_history, 1, axis=0)
-            action_history[0,:] = pre_action_onehot
-            action_history_list.append(action_history)
+                pre_action_onehot = one_hot(pre_action_index, num_actions)
+                action_history = np.roll(action_history, 1, axis=0)
+                action_history[0,:] = pre_action_onehot
+                action_history_list.append(action_history)
+            else:
+                action_onehot = one_hot(action_index, num_actions)
+                pre_action_onehot = one_hot(pre_action_index, num_actions)
+                action_history = np.roll(action_history, 1, axis=0)
+                action_history[0,:] = pre_action_onehot
+
+                offset_step -= 1
             ########################################################################################
 
             obs = next_obs
@@ -265,7 +279,6 @@ class TrajetoryDataset(tf.data.Dataset):
             step_num += 1
 
         yield (obs_history_list_list, action_history_list_list, action_list_list, raw_action_list_list)
-        #break
 
   def __new__(cls, num_trajectorys=3):
       return tf.data.Dataset.from_generator(cls._generator, output_types=(tf.dtypes.float32, tf.dtypes.float32, tf.dtypes.float32, 
